@@ -18,7 +18,7 @@ Targets are defined in [requirements](product-requirements.md). Measure on the d
 | Duplicate presence | User/socket mapping and leave cleanup | Deduplicate by user, remove only after final socket closes. |
 | Stale note after reconnect | Rejoin snapshot, revision checks, periodic sync | Fetch canonical state before allowing draft submission. |
 | History grows too large | Snapshot frequency, note size, database usage | Review quotas and explicitly design retention; do not silently drop history. |
-| Deep-link 404 on frontend | Vercel SPA fallback | Add/verify rewrite and redeploy client. |
+| Deep-link 404 on frontend | Vercel SPA fallback | Add/verify rewrite and redeploy frontend. |
 
 ## Incident handling
 

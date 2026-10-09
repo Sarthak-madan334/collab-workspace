@@ -1,5 +1,5 @@
 {
-  "name": "collab-workspace-client",
+  "name": "collab-workspace-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",

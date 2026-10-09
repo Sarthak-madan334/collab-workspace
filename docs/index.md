@@ -14,7 +14,7 @@ All guides describe the planned implementation unless explicitly stated otherwis
 | [API contract](api-contract.md) | HTTP routes, payloads, and errors |
 | [Realtime protocol](realtime-protocol.md) | Events, ordering, acknowledgments, and recovery |
 | [Security](security.md) | Sessions, credentials, permissions, and validation |
-| [Local development](local-development.md) | Planned layout, commands, and environment variables |
+| [Local development](local-development.md) | Repository layout, commands, and environment variables |
 | [Implementation plan](implementation-plan.md) | Milestones and completion gates |
 | [Testing and validation](testing-and-validation.md) | Functional, concurrency, security, and deployment checks |
 | [Deployment](deployment.md) | Vercel frontend, Render backend, Atlas database |

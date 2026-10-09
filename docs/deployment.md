@@ -1,12 +1,12 @@
 # Deployment: Vercel, Render, and MongoDB Atlas
 
-This is the planned deployment runbook. No service has been created or deployed. Settings assume the future `client/` and `server/` layout in [local development](local-development.md).
+This is the planned deployment runbook. No service has been created or deployed. Settings assume the `frontend/` and `server/` layout in [local development](local-development.md).
 
 ## Hosting contract
 
 | Component | Host | Configuration |
 | --- | --- | --- |
-| React frontend | Vercel | Root `client`, Vite preset, build `npm run build`, output `dist` |
+| React frontend | Vercel | Root `frontend`, Vite preset, build `npm run build`, output `dist` |
 | Node.js + Socket.IO | Render web service | Root `server`, build `npm ci`, start `npm start`, health `/health/ready` |
 | Database | MongoDB Atlas | Separate production database and scoped application user |
 
@@ -30,14 +30,14 @@ Render supports WebSocket connections, but replacement instances close existing 
 
 ## 3. Deploy Vercel frontend
 
-Import the repository, select root `client`, choose Vite, and use build `npm run build` with output `dist`. Set:
+Import the repository, select root `frontend`, choose Vite, and use build `npm run build` with output `dist`. Set:
 
 ```dotenv
 VITE_API_BASE_URL=https://<backend>.onrender.com/api/v1
 VITE_SOCKET_URL=https://<backend>.onrender.com
 ```
 
-These are public build-time values. Rebuild after changing them. Add a SPA fallback in the future `client/vercel.json` so direct navigation to React Router routes works:
+These are public build-time values. Rebuild after changing them. The `frontend/vercel.json` SPA fallback lets direct navigation to React Router routes work:
 
 ```json
 {

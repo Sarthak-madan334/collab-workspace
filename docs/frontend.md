@@ -2,9 +2,9 @@
 
 ## Technology and organization
 
-The React client lives in `client/` and uses JavaScript, Vite, React Router, `socket.io-client`, native `fetch`, Lucide icons, and plain CSS. Deploy the static build to Vercel. API and event shapes follow [the HTTP contract](api-contract.md) and [realtime protocol](realtime-protocol.md).
+The React frontend lives in `frontend/` and uses JavaScript, Vite, React Router, `socket.io-client`, native `fetch`, Lucide icons, and plain CSS. Deploy the static build to Vercel. API and event shapes follow [the HTTP contract](api-contract.md) and [realtime protocol](realtime-protocol.md).
 
-The implementation is organized around `client/src/App.jsx` for routes and workspace flows, `api.js` for HTTP requests, `realtime.js` for Socket.IO setup and acknowledgments, and `styles.css` for the responsive black and glass visual system. `VITE_API_BASE_URL` and `VITE_SOCKET_URL` select the backend origins; see [local development](local-development.md).
+The implementation is organized around `frontend/src/App.jsx` for routes and workspace flows, `api.js` for HTTP requests, `realtime.js` for Socket.IO setup and acknowledgments, and `styles.css` for the responsive black and glass visual system. `VITE_API_BASE_URL` and `VITE_SOCKET_URL` select the backend origins; see [local development](local-development.md).
 
 The UI covers registration/sign-in, room listing/creation/joining, collaborative plain-text editing, presence, save/reconnect states, version browsing/preview/restore, and owner invite retrieval/rotation. Authentication stays in memory, so a page reload sends the user back to sign-in. A live backend implementing the documented contracts is required for data and realtime behavior.
 

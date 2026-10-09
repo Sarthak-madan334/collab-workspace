@@ -2,15 +2,15 @@
 
 ## Current state
 
-The checkout contains documentation only. The following structure, environment examples, and commands become executable after the scaffold milestone. They are specifications for the future project; this task has not installed packages or created secrets.
+The React frontend is implemented under `frontend/`. The Node.js backend has not been implemented yet, so frontend authentication, room data, and collaboration require a backend that follows the documented contracts.
 
-## Planned layout
+## Repository layout
 
 ```text
 Synkro/
   README.md
   docs/
-  client/
+  frontend/
     package.json
     package-lock.json
     .env.example
@@ -26,13 +26,13 @@ Synkro/
   .gitignore
 ```
 
-Use independent npm packages for client and server so both hosting providers can use their own root directory. No root workspace tooling is required.
+Use independent npm packages for the frontend and server so Vercel and Render can use their own root directory. No root workspace tooling is required.
 
 ## Prerequisites and configuration
 
-Install Git and the same supported Node.js LTS major chosen during scaffolding. Create a development Atlas database, a scoped database user, and an IP access-list entry for your machine. Use an Atlas deployment that supports the transactions required by the write contract; integration tests must use a replica-set-capable database, not a standalone local MongoDB process.
+Install Git and the Node.js version supported by the frontend tooling. Create a development Atlas database, a scoped database user, and an IP access-list entry for your machine when implementing the backend. Use an Atlas deployment that supports the transactions required by the write contract; integration tests must use a replica-set-capable database, not a standalone local MongoDB process.
 
-Planned `client/.env.example`:
+`frontend/.env.example`:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:4000/api/v1
