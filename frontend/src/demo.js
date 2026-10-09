@@ -15,9 +15,9 @@ const initialNote = { roomId: initialRoom.id, content: initialContent, revision:
 const initialVersions = [
   { roomId: initialRoom.id, revision: 0, content: '', authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'initial', createdAt: '2026-10-09T10:00:00.000Z' },
   { roomId: initialRoom.id, revision: 1, content: 'BuildLab planning\n\nStart with the problem we want to solve.', authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'edit', createdAt: '2026-10-09T10:08:00.000Z' },
-  { roomId: initialRoom.id, revision: 2, content: 'BuildLab planning\n\nStart with the problem we want to solve.\n\nOpen question: what should the shared page feel like?', authorId: 'demo-alie', authorName: 'Alie Sharma', kind: 'edit', createdAt: '2026-10-09T10:16:00.000Z' },
+  { roomId: initialRoom.id, revision: 2, content: 'BuildLab planning\n\nStart with the problem we want to solve.\n\nOpen question: what should the shared page feel like?', authorId: 'demo-alie', authorName: 'Demo 2', kind: 'edit', createdAt: '2026-10-09T10:16:00.000Z' },
   { roomId: initialRoom.id, revision: 3, content: `BuildLab '26 — planning notes\n\nToday\n• Align on the core collaboration flow\n• Keep the shared page calm and easy to scan`, authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'edit', createdAt: '2026-10-09T10:24:00.000Z' },
-  { ...initialNote, authorId: 'demo-alie', authorName: 'Alie Sharma', kind: 'edit', createdAt: initialNote.updatedAt },
+  { ...initialNote, authorId: 'demo-alie', authorName: 'Demo 2', kind: 'edit', createdAt: initialNote.updatedAt },
 ];
 
 function read(key, fallback) {

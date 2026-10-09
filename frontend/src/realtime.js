@@ -52,7 +52,7 @@ class LocalDemoSocket {
       this.activeRoom = payload.roomId;
       return {
         note: demoNote(payload.roomId),
-        presence: [{ id: DEMO_USER.id, name: DEMO_USER.name }, { id: 'demo-alie', name: 'Alie Sharma' }],
+        presence: [{ id: DEMO_USER.id, name: DEMO_USER.name }, { id: 'demo-alie', name: 'Demo 2' }],
         presenceSequence: 1,
       };
     }
@@ -66,7 +66,7 @@ class LocalDemoSocket {
     }
     if (event === 'note:sync') {
       if (payload.roomId !== this.activeRoom) throw new Error('Join this room before syncing.');
-      return { note: demoNote(payload.roomId), presence: [{ id: DEMO_USER.id, name: DEMO_USER.name }, { id: 'demo-alie', name: 'Alie Sharma' }], presenceSequence: 1 };
+      return { note: demoNote(payload.roomId), presence: [{ id: DEMO_USER.id, name: DEMO_USER.name }, { id: 'demo-alie', name: 'Demo 2' }], presenceSequence: 1 };
     }
     if (event === 'note:status') {
       const version = demoVersions(payload.roomId).find((item) => item.operationId === payload.operationId);
