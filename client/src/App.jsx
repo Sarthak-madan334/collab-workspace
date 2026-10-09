@@ -3,9 +3,9 @@ import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-rou
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
-  CircleHelp, Clock3, Copy, FileClock, FilePlus2, Fingerprint, Globe2,
+  ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
   History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  Plus, Radio, RefreshCw, Settings2, ShieldCheck, Sparkles, Users,
+  LockKeyhole, PenLine, Plus, Radio, RefreshCw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
@@ -28,7 +28,7 @@ const dateLabel = (date) => date ? new Intl.DateTimeFormat(undefined, { month: '
 const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 function Brand({ compact = false }) {
-  return <Link className={`brand ${compact ? 'brand-compact' : ''}`} to="/dashboard" aria-label="Synkro home">
+  return <Link className={`brand ${compact ? 'brand-compact' : ''}`} to="/" aria-label="Synkro home">
     <span className="brand-mark"><span /></span><span className="brand-name">synkro<span className="brand-period">.</span></span>
   </Link>;
 }
@@ -530,18 +530,80 @@ function RoomPage() {
 
 function NotFound() { return <AppFrame><div className="not-found glass-panel"><span className="section-kicker">NOT THIS WAY</span><h1>This page got lost.</h1><p>Let’s get you back to your team's spaces.</p><Link className="button button-primary" to="/dashboard">Back to workspace <ArrowRight size={15} /></Link></div></AppFrame>; }
 
+const REPOSITORY_URL = 'https://github.com/Sarthak-madan334/collab-workspace';
+
+function SiteFooter() {
+  return <footer className="site-footer glass-panel">
+    <div className="site-footer-main"><div className="site-footer-brand"><Brand /><p>A shared space for good work.<br />Made for teams that think out loud.</p></div>
+      <div className="site-footer-links"><span className="section-kicker">EXPLORE</span><Link to="/#about">About Synkro</Link><Link to="/#how-it-works">How it works</Link><Link to="/privacy">Privacy policy</Link><a href={REPOSITORY_URL} target="_blank" rel="noreferrer">Project repository <ArrowUpRight size={13} /></a></div>
+      <div className="site-footer-note"><span className="footer-note-mark"><GitBranch size={16} /></span><span>Built around shared notes,<br />thoughtful teamwork, and trust.</span></div>
+    </div>
+    <div className="site-footer-bottom"><span>© 2026 SYNKRO WORKSPACE</span><span>TECHSPACE BUILDLAB '26 <i>·</i> A04</span><span>BUILT TO THINK TOGETHER <b>✳</b></span></div>
+  </footer>;
+}
+
+function LandingPage() {
+  const { session } = useSession();
+  return <main className="landing-page">
+    <header className="landing-nav glass-panel">
+      <Brand />
+      <nav className="landing-nav-links" aria-label="Main navigation"><a href="#about">About</a><a href="#how-it-works">How it works</a><a href={REPOSITORY_URL} target="_blank" rel="noreferrer">Repository <ArrowUpRight size={12} /></a></nav>
+      <div className="landing-nav-actions"><Link className="button landing-signin" to={session ? '/dashboard' : '/login'}>{session ? 'Open workspace' : 'Sign in'} <ArrowUpRight size={14} /></Link><Link className="button button-primary landing-join" to={session ? '/dashboard' : '/register'}>{session ? 'Go to rooms' : 'Get started'} <ArrowRight size={14} /></Link></div>
+    </header>
+
+    <section className="landing-hero" id="about">
+      <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
+      <div className="landing-hero-art" aria-label="Illustration of a shared notes workspace">
+        <div className="hero-art-orbit hero-art-orbit-a" /><div className="hero-art-orbit hero-art-orbit-b" />
+        <div className="hero-window hero-window-left glass-panel"><div className="hero-window-top"><span>01 / ROOM</span><span className="hero-window-dot" /></div><div className="hero-window-title">A place to start.</div><div className="hero-window-lines"><i /><i /><i /><i /></div><div className="hero-window-tag"><PenLine size={12} /> shared notes</div></div>
+        <div className="hero-window hero-window-main glass-panel"><div className="hero-window-top"><span className="hero-live-label"><i /> TEAM SPACE · LIVE</span><MoreHorizontal size={16} /></div><div className="hero-note-title">Ideas in progress</div><p className="hero-note-copy">Good work gets better<br />when we make it together.</p><div className="hero-note-rule" /><div className="hero-collaborators"><div className="hero-avatar-group"><span className="avatar avatar-olive">A</span><span className="avatar avatar-lime">P</span><span className="avatar avatar-violet">T</span></div><span>3 people here</span><span className="hero-note-saved"><Check size={11} /> SAVED</span></div></div>
+        <div className="hero-window hero-window-history glass-panel"><div className="hero-window-top"><span>ROOM HISTORY</span><History size={13} /></div><div className="hero-history-row"><span className="hero-history-icon"><FileClock size={12} /></span><span><b>Version 08</b><small>A little earlier · You</small></span><ArrowUpRight size={13} /></div><div className="hero-history-row muted"><span className="hero-history-icon"><FileClock size={12} /></span><span><b>Version 07</b><small>Earlier today · Alie</small></span></div></div>
+        <div className="hero-art-caption"><span>ONE SHARED PAGE</span><span>ALWAYS FIND YOUR WAY BACK <i>✳</i></span></div>
+      </div>
+      <a className="scroll-cue" href="#how-it-works"><span>SCROLL TO EXPLORE</span><ArrowDown size={13} /></a>
+    </section>
+
+    <section className="landing-intro glass-panel" id="what-it-does"><div className="intro-index">01 <span>—</span> THE IDEA</div><div className="intro-content"><h2>Less passing files.<br /><span>More making progress.</span></h2><p>Teams often end up with notes scattered across chats and documents. Synkro gives a room one shared page, so everyone can follow the same thread, contribute as ideas arrive, and revisit earlier versions when plans change.</p></div><div className="intro-stamp"><span>MADE FOR</span><b>TEAMS<br />IN SYNC</b><i>✳</i></div></section>
+
+    <section className="how-section" id="how-it-works"><div className="how-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> THE FLOW</div><h2>Simple by design.<br /><span>Better together.</span></h2></div><p>Everything your team needs to get into a room and keep the work moving.</p></div>
+      <div className="how-grid">
+        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">01</span><span className="how-icon"><Users size={17} /></span></div><div className="how-card-art join-art"><div className="join-token"><span className="token-symbol">↗</span><span>YOUR TEAM'S ROOM</span></div><div className="join-avatars"><i>A</i><i>P</i><i>T</i><small>your people</small></div></div><h3>Make a room</h3><p>Create a private space for a project, a study session, or the next idea your team wants to work through.</p><span className="how-card-foot">CREATE OR JOIN <ArrowUpRight size={13} /></span></article>
+        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">02</span><span className="how-icon"><Wifi size={17} /></span></div><div className="how-card-art sync-art"><div className="sync-lines"><i /><i /><i /></div><div className="sync-pulse"><span /><span /><span /></div><span className="sync-status"><i /> LIVE TOGETHER</span></div><h3>Think out loud</h3><p>Write on one shared page. Updates appear for everyone in the room, with a live view of who's there.</p><span className="how-card-foot">WRITE · SEE · RESPOND <ArrowUpRight size={13} /></span></article>
+        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">03</span><span className="how-icon"><History size={17} /></span></div><div className="how-card-art history-art"><div className="history-art-row"><span>08</span><i /><b>Latest notes</b><small>NOW</small></div><div className="history-art-row"><span>07</span><i /><b>Project outline</b><small>10:42</small></div><div className="history-art-row"><span>06</span><i /><b>First ideas</b><small>09:18</small></div><span className="history-art-restore"><RefreshCw size={12} /> PICK UP ANY VERSION</span></div><h3>Find your way back</h3><p>Saved versions help your team review how a note changed and restore an earlier version when needed.</p><span className="how-card-foot">HISTORY THAT HELPS <ArrowUpRight size={13} /></span></article>
+      </div>
+    </section>
+
+    <section className="landing-stack glass-panel"><div className="stack-symbol"><Database size={18} /></div><div className="stack-copy"><span className="section-kicker">THE FOUNDATION</span><h2>Built for a shared page.</h2><p>React and JavaScript on the frontend. Node.js and Socket.IO carry live updates. MongoDB Atlas keeps rooms, notes, and revision history together.</p></div><div className="stack-pills"><span>REACT</span><span>NODE.JS</span><span>SOCKET.IO</span><span>MONGODB ATLAS</span></div></section>
+
+    <section className="landing-cta glass-panel"><div className="cta-orbit" /><span className="section-kicker">START WITH ONE ROOM</span><h2>Make room for<br /><span>what's next.</span></h2><p>Bring your team together around one shared page.</p><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>{session ? 'Open your workspace' : 'Create your account'} <ArrowRight size={15} /></Link><span className="cta-spark">✳</span></section>
+    <SiteFooter />
+  </main>;
+}
+
+function PrivacyPage() {
+  return <main className="landing-page privacy-page">
+    <header className="landing-nav glass-panel"><Brand /><nav className="landing-nav-links" aria-label="Main navigation"><Link to="/#about">About</Link><Link to="/#how-it-works">How it works</Link><a href={REPOSITORY_URL} target="_blank" rel="noreferrer">Repository <ArrowUpRight size={12} /></a></nav><div className="landing-nav-actions"><Link className="button landing-signin" to="/login">Sign in <ArrowUpRight size={14} /></Link><Link className="button button-primary landing-join" to="/register">Get started <ArrowRight size={14} /></Link></div></header>
+    <article className="privacy-document glass-panel"><div className="eyebrow"><span className="eyebrow-line" /> THE IMPORTANT DETAILS</div><h1>Privacy, in plain words.</h1><p className="privacy-intro">Synkro is designed to keep team notes inside the rooms where they belong. This page explains what the frontend sends and what happens in the current app.</p><div className="privacy-updated">PROJECT PRIVACY NOTICE <i /> LAST UPDATED OCTOBER 9, 2026</div>
+      <section><h2><LockKeyhole size={16} /> Account information</h2><p>When you register or sign in, Synkro sends your name, email address, and password to the configured application server so it can create or check your account. Password handling and account storage are managed by that server. The frontend does not save your password.</p></section>
+      <section><h2><PenLine size={16} /> Notes and rooms</h2><p>Room names, invite codes, note text, revision history, and collaboration events are sent to the application server when you use those features. The project is designed to store workspace data in MongoDB Atlas. Room access is intended for authenticated members; invite codes should be shared only with people you want to join.</p></section>
+      <section><h2><KeyRound size={16} /> Sign-in session</h2><p>The current frontend keeps the session token in memory for the open page. It is not written to local storage. Reloading the page signs you out, and you need to sign in again. Sign out asks the server to revoke the active session and clears the frontend session.</p></section>
+      <section><h2><Globe2 size={16} /> Network and service providers</h2><p>The browser communicates with the backend URL configured for the app over HTTP and Socket.IO; production deployments should use HTTPS and secure WebSockets. The page currently loads DM Sans, Manrope, and DM Mono fonts from Google Fonts, so opening the site makes a font request to Google. See Google's privacy information for how it handles those requests.</p><a className="privacy-external" href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google privacy information <ArrowUpRight size={13} /></a></section>
+      <section><h2><Database size={16} /> Analytics and your choices</h2><p>The frontend does not include an analytics or advertising SDK. You can leave a room or sign out at any time. Ask the project maintainers through the <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">repository</a> about data access or removal. Data retention and deletion are handled by the service operator.</p></section>
+      <div className="privacy-caveat"><ShieldCheck size={15} /><p>This is a project privacy notice, not legal advice. The service operator should update it if hosting, storage, analytics, or account practices change.</p></div>
+      <Link className="button button-glass privacy-back" to="/"> <ArrowLeft size={14} /> Back to Synkro</Link>
+    </article>
+    <SiteFooter />
+  </main>;
+}
+
 export default function App() {
   return <AuthContext><Routes>
-    <Route path="/" element={<RootRoute />} />
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/privacy" element={<PrivacyPage />} />
     <Route path="/login" element={<AuthPage />} />
     <Route path="/register" element={<AuthPage register />} />
     <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
     <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
     <Route path="*" element={<NotFound />} />
   </Routes></AuthContext>;
-}
-
-function RootRoute() {
-  const { session } = useSession();
-  return <Navigate to={session ? '/dashboard' : '/login'} replace />;
 }
