@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
+import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -91,6 +92,7 @@ function AuthPage({ register = false }) {
         {error && <div className="form-error" role="alert">{error}</div>}
         <button className="button button-primary auth-submit" disabled={busy}>{busy ? <><span className="spinner" /> {register ? 'Creating your space…' : 'Signing you in…'}</> : <>{register ? 'Create your account' : 'Sign in to Synkro'} <ArrowRight size={16} /></>}</button>
       </form>
+      {!register && DEMO_MODE && <div className="demo-access"><div><span className="demo-access-tag">LOCAL DEMO</span><span>Preview without a backend</span></div><div className="demo-credentials"><code>{DEMO_EMAIL}</code><code>{DEMO_PASSWORD}</code></div><button type="button" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setError(''); }}>Fill demo sign-in <ArrowDown size={13} /></button><small>Demo data stays in this browser. No server connection is used.</small></div>}
       <div className="auth-switch">{register ? 'Already have a space?' : 'New to Synkro?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'} <ArrowUpRight size={13} /></Link></div>
       <div className="auth-secure"><ShieldCheck size={14} /> Your notes belong to your team. Sign in again after a page reload.</div>
     </div>
@@ -110,7 +112,7 @@ function AppFrame({ children }) {
       <nav className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className="nav-link active"><LayoutGrid size={15} /> Workspace</Link>
         <span className="nav-divider" />
-        <span className="nav-caption"><span className="status-dot" /> All systems calm</span>
+        <span className="nav-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local demo · saved in this browser' : 'All systems calm'}</span>
       </nav>
       <div className="topbar-actions">
         <button className="icon-button mobile-menu" onClick={() => setMobileOpen((value) => !value)} aria-label="Toggle navigation"><Menu size={19} /></button>
@@ -187,7 +189,7 @@ function Dashboard() {
       {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-create-card glass-panel" onClick={() => setDialog('create')}><span className="create-card-icon"><Plus size={19} /></span><strong>Start with a blank page</strong><small>Create a room for your next idea</small><ArrowUpRight className="create-arrow" size={17} /></button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
     </section>
 
-    <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>Small edits, all in sync.</strong><p>Updates travel with your room, so nobody has to ask for the latest copy.</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> Your spaces are private to you and your team.</span></section>
+    <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>{DEMO_MODE ? 'A local preview space.' : 'Small edits, all in sync.'}</strong><p>{DEMO_MODE ? 'Demo changes are saved only in this browser.' : 'Updates travel with your room, so nobody has to ask for the latest copy.'}</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local sample content · not connected to a team' : 'Your spaces are private to you and your team.'}</span></section>
 
     {dialog && <Modal title={dialog === 'create' ? 'Make a new room' : 'Join your team'} subtitle={dialog === 'create' ? 'Give this shared space a name. You can invite people after.' : 'Paste an invite code from someone in your team.'} onClose={() => setDialog('')}>
       <form onSubmit={dialog === 'create' ? createRoom : joinRoom} className="modal-form">
@@ -509,7 +511,7 @@ function RoomPage() {
         </div><div className="aside-foot"><span>{presence.length} {presence.length === 1 ? 'person' : 'people'} online</span><span className="member-spark">✳</span></div></section>
         <section className="aside-card room-tip glass-panel"><div className="aside-card-head"><span className="aside-icon tip-icon"><Sparkles size={15} /></span><span>A LITTLE TIP</span></div><p>Write freely. Everyone in this room sees the same page update as you go.</p><div className="tip-decoration">✳</div></section>
         {isOwner && <button className="manage-invite glass-panel" onClick={loadInvite}><span className="manage-icon"><Settings2 size={15} /></span><span><strong>Room invitations</strong><small>Manage who can join this space</small></span><ArrowRight size={15} /></button>}
-        <div className="room-aside-note"><ShieldCheck size={13} /><span>Only invited members can see these notes.</span></div>
+        <div className="room-aside-note"><ShieldCheck size={13} /><span>{DEMO_MODE ? 'Local demo data stays in this browser.' : 'Only invited members can see these notes.'}</span></div>
       </aside>
     </div>
 

@@ -8,6 +8,8 @@ The implementation is organized around `frontend/src/App.jsx` for routes and wor
 
 The UI covers registration/sign-in, room listing/creation/joining, collaborative plain-text editing, presence, save/reconnect states, version browsing/preview/restore, and owner invite retrieval/rotation. Authentication stays in memory, so a page reload sends the user back to sign-in. A live backend implementing the documented contracts is required for data and realtime behavior.
 
+Vite development mode also exposes a local preview account (`demo@synkro.app` / `synkro-demo`) so the interface can be explored without a backend. Its sample rooms, edits, and history are stored in that browser's local storage. This preview is disabled in production builds and does not represent a real authenticated or multi-user session.
+
 Comments, editor/viewer permissions, and CRDT merging are optional stretch features in the product requirements. Their storage and HTTP/Socket.IO contracts are not defined by the current backend specification, so the client does not simulate them as if they were persisted or synchronized. They require an agreed backend contract before end-to-end frontend work.
 
 ## Routes and screens

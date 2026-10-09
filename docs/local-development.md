@@ -88,4 +88,6 @@ On initial scaffold use `npm install` to generate each lockfile; use `npm ci` th
 
 ## First smoke test
 
+For a UI-only preview, run the frontend and use the local demo credentials shown on the sign-in screen. The demo needs no backend and writes sample workspace data to the current browser's local storage.
+
 Check `/health/ready`, register two distinct test users, create and join a room, confirm two-way edits and presence, reload/sign in again, and restore a revision. Never point automated cleanup at the production database. Test startup must reject database names that do not clearly identify a test environment.
