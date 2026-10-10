@@ -154,16 +154,16 @@ function useRooms() {
   return { rooms, setRooms, loading, error, refresh };
 }
 
-const AMBIENT_PARTICLES = Array.from({ length: 32 }, (_, index) => ({
+const AMBIENT_PARTICLES = Array.from({ length: 52 }, (_, index) => ({
   id: index,
   left: `${(index * 47 + 9) % 100}%`,
   top: `${(index * 67 + 13) % 100}%`,
   size: `${2 + (index % 2)}px`,
-  duration: `${14 + (index * 5) % 12}s`,
+  duration: `${11 + (index * 5) % 10}s`,
   delay: `-${(index * 11) % 24}s`,
   opacity: `${0.4 + (index % 4) * 0.07}`,
-  sway: `${((index * 13) % 57) - 28}px`,
-  rise: `${35 + (index * 11) % 66}px`,
+  sway: `${((index * 13) % 69) - 34}px`,
+  rise: `${42 + (index * 11) % 84}px`,
   tone: ['lime', 'moss', 'sage', 'grey'][index % 4],
 }));
 
@@ -229,8 +229,8 @@ function DashboardOnboardingGuide({ targetRef, ready, initialAllowed, replayToke
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const tooltipRect = tooltipRef.current?.getBoundingClientRect();
-    const tooltipWidth = tooltipRect?.width || 270;
-    const tooltipHeight = tooltipRect?.height || 100;
+    const tooltipWidth = tooltipRect?.width || 320;
+    const tooltipHeight = tooltipRect?.height || 110;
     if (targetRect.bottom <= 0 || targetRect.top >= viewportHeight) {
       if (visibleRef.current) dismissRef.current?.();
       return;
@@ -454,7 +454,11 @@ function Dashboard() {
       />
 
       {error && <div className="inline-alert" role="alert"><span>{error}</span><GlassButton onClick={refresh}><RefreshCw size={14} /> Retry</GlassButton></div>}
-      {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-create-card glass-panel" onClick={() => setDialog('create')}><span className="create-card-icon"><Plus size={19} /></span><strong>Start with a blank page</strong><small>Create a room for your next idea</small><ArrowUpRight className="create-arrow" size={17} /></button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
+      {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
+        <div className="room-card-top"><span className="create-card-icon"><Plus size={19} /></span><ArrowUpRight className="create-arrow" size={17} /></div>
+        <div className="room-card-body"><span className="room-label">NEW ROOM</span><h3>Start with a blank page</h3><p>Create a room for your next idea</p></div>
+        <div className="room-card-footer"><span className="room-meta"><Plus size={14} /> Blank page</span><span className="room-open">Create room <ArrowRight size={14} /></span></div>
+      </button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
     </section>
 
     <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>{DEMO_MODE ? 'A local preview space.' : 'Small edits, all in sync.'}</strong><p>{DEMO_MODE ? 'Demo changes are saved only in this browser.' : 'Updates travel with your room, so nobody has to ask for the latest copy.'}</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local sample content · not connected to a team' : 'Your spaces are private to you and your team.'}</span></section>
