@@ -11,6 +11,7 @@ import {
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
+import ParticleStream from './ParticleStream.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -1081,6 +1082,7 @@ function LandingPage() {
     <SiteNavigation session={session} />
 
     <section className="landing-hero" id="about">
+      <ParticleStream />
       <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
       <div className="landing-hero-art" aria-label="Illustration of a shared notes workspace">
         <div className="hero-art-orbit hero-art-orbit-a" /><div className="hero-art-orbit hero-art-orbit-b" />
