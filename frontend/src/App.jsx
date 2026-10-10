@@ -544,14 +544,56 @@ function SiteFooter() {
   </footer>;
 }
 
+function SiteNavigation({ session, privacy = false }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(() => window.scrollY > 20);
+  const [activeAnchor, setActiveAnchor] = useState(privacy ? '' : 'about');
+
+  useEffect(() => {
+    const updateScrollState = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', updateScrollState, { passive: true });
+    updateScrollState();
+    return () => window.removeEventListener('scroll', updateScrollState);
+  }, []);
+
+  useEffect(() => {
+    if (privacy || !('IntersectionObserver' in window)) return undefined;
+    const sections = ['about', 'how-it-works'].map((sectionId) => document.getElementById(sectionId)).filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActiveAnchor(visible.target.id);
+    }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.2, 0.5] });
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [privacy]);
+
+  const aboutHref = privacy ? '/#about' : '#about';
+  const flowHref = privacy ? '/#how-it-works' : '#how-it-works';
+  const closeMenu = () => setMenuOpen(false);
+
+  return <header className={`landing-nav glass-panel${scrolled ? ' is-scrolled' : ''}${menuOpen ? ' menu-is-open' : ''}`}>
+    <Brand />
+    <button className="landing-menu-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="landing-primary-nav" onClick={() => setMenuOpen((open) => !open)}>
+      {menuOpen ? <X size={18} /> : <Menu size={18} />}
+    </button>
+    <div className={`landing-nav-content${menuOpen ? ' nav-content-open' : ''}`}>
+      <nav className="landing-nav-links" id="landing-primary-nav" aria-label="Primary">
+        <a href={aboutHref} className={activeAnchor === 'about' ? 'is-active' : ''} aria-current={activeAnchor === 'about' ? 'location' : undefined} onClick={closeMenu}>About</a>
+        <a href={flowHref} className={activeAnchor === 'how-it-works' ? 'is-active' : ''} aria-current={activeAnchor === 'how-it-works' ? 'location' : undefined} onClick={closeMenu}>How it works</a>
+        <a href={REPOSITORY_URL} target="_blank" rel="noreferrer" onClick={closeMenu}>Repository <ArrowUpRight size={12} /></a>
+      </nav>
+      <div className="landing-nav-actions">
+        <Link className="button landing-signin" to={privacy ? '/login' : (session ? '/dashboard' : '/login')} onClick={closeMenu}>{privacy || !session ? 'Sign in' : 'Open workspace'} <ArrowUpRight size={14} /></Link>
+        <Link className="button button-primary landing-join" to={privacy ? '/register' : (session ? '/dashboard' : '/register')} onClick={closeMenu}>{privacy || !session ? 'Get started' : 'Go to rooms'} <ArrowRight size={14} /></Link>
+      </div>
+    </div>
+  </header>;
+}
+
 function LandingPage() {
   const { session } = useSession();
   return <main className="landing-page">
-    <header className="landing-nav glass-panel">
-      <Brand />
-      <nav className="landing-nav-links" aria-label="Main navigation"><a href="#about">About</a><a href="#how-it-works">How it works</a><a href={REPOSITORY_URL} target="_blank" rel="noreferrer">Repository <ArrowUpRight size={12} /></a></nav>
-      <div className="landing-nav-actions"><Link className="button landing-signin" to={session ? '/dashboard' : '/login'}>{session ? 'Open workspace' : 'Sign in'} <ArrowUpRight size={14} /></Link><Link className="button button-primary landing-join" to={session ? '/dashboard' : '/register'}>{session ? 'Go to rooms' : 'Get started'} <ArrowRight size={14} /></Link></div>
-    </header>
+    <SiteNavigation session={session} />
 
     <section className="landing-hero" id="about">
       <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
@@ -584,7 +626,7 @@ function LandingPage() {
 
 function PrivacyPage() {
   return <main className="landing-page privacy-page">
-    <header className="landing-nav glass-panel"><Brand /><nav className="landing-nav-links" aria-label="Main navigation"><Link to="/#about">About</Link><Link to="/#how-it-works">How it works</Link><a href={REPOSITORY_URL} target="_blank" rel="noreferrer">Repository <ArrowUpRight size={12} /></a></nav><div className="landing-nav-actions"><Link className="button landing-signin" to="/login">Sign in <ArrowUpRight size={14} /></Link><Link className="button button-primary landing-join" to="/register">Get started <ArrowRight size={14} /></Link></div></header>
+    <SiteNavigation privacy />
     <article className="privacy-document glass-panel"><div className="eyebrow"><span className="eyebrow-line" /> THE IMPORTANT DETAILS</div><h1>Privacy, in plain words.</h1><p className="privacy-intro">Synkro is designed to keep team notes inside the rooms where they belong. This page explains what the frontend sends and what happens in the current app.</p><div className="privacy-updated">PROJECT PRIVACY NOTICE <i /> LAST UPDATED OCTOBER 9, 2026</div>
       <section><h2><LockKeyhole size={16} /> Account information</h2><p>When you register or sign in, Synkro sends your name, email address, and password to the configured application server so it can create or check your account. Password handling and account storage are managed by that server. The frontend does not save your password.</p></section>
       <section><h2><PenLine size={16} /> Notes and rooms</h2><p>Room names, invite codes, note text, revision history, and collaboration events are sent to the application server when you use those features. The project is designed to store workspace data in MongoDB Atlas. Room access is intended for authenticated members; invite codes should be shared only with people you want to join.</p></section>
