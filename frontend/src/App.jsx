@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
@@ -34,9 +34,9 @@ function Brand({ compact = false }) {
   </Link>;
 }
 
-function GlassButton({ children, className = '', variant = 'glass', ...props }) {
-  return <button className={`button button-${variant} ${className}`} {...props}>{children}</button>;
-}
+const GlassButton = forwardRef(function GlassButton({ children, className = '', variant = 'glass', ...props }, ref) {
+  return <button ref={ref} className={`button button-${variant} ${className}`} {...props}>{children}</button>;
+});
 
 function AuthShell({ children, mode }) {
   return <main className="auth-shell">
@@ -102,11 +102,13 @@ function AuthPage({ register = false }) {
 
 function AppFrame({ children }) {
   const { session, signOut } = useSession();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
   return <div className="app-shell">
+    {location.pathname === '/dashboard' && <AmbientParticles />}
     <header className="topbar glass-panel">
       <Brand />
       <nav className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
@@ -151,15 +153,259 @@ function useRooms() {
   return { rooms, setRooms, loading, error, refresh };
 }
 
+const AMBIENT_PARTICLES = Array.from({ length: 32 }, (_, index) => ({
+  id: index,
+  left: `${(index * 47 + 9) % 100}%`,
+  top: `${(index * 67 + 13) % 100}%`,
+  size: `${2 + (index % 2)}px`,
+  duration: `${14 + (index * 5) % 12}s`,
+  delay: `-${(index * 11) % 24}s`,
+  opacity: `${0.4 + (index % 4) * 0.07}`,
+  sway: `${((index * 13) % 57) - 28}px`,
+  rise: `${35 + (index * 11) % 66}px`,
+  tone: ['lime', 'moss', 'sage', 'grey'][index % 4],
+}));
+
+function AmbientParticles() {
+  const [pageHidden, setPageHidden] = useState(false);
+
+  useEffect(() => {
+    const updateVisibility = () => setPageHidden(document.hidden);
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
+  return <div className={`ambient-particles${pageHidden ? ' is-paused' : ''}`} aria-hidden="true">
+    {AMBIENT_PARTICLES.map((particle) => <span
+      key={particle.id}
+      className={`ambient-particle particle-${particle.tone}`}
+      style={{
+        left: particle.left,
+        top: particle.top,
+        width: particle.size,
+        height: particle.size,
+        '--particle-duration': particle.duration,
+        '--particle-delay': particle.delay,
+        '--particle-opacity': particle.opacity,
+        '--particle-sway': particle.sway,
+        '--particle-rise': particle.rise,
+      }}
+    />)}
+  </div>;
+}
+
+function readGuideDismissed(storageKey) {
+  try { return window.localStorage.getItem(storageKey) === 'true'; }
+  catch { return false; }
+}
+
+function DashboardOnboardingGuide({ targetRef, ready, initialAllowed, replayToken, onActiveChange, onComplete }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
+  const [geometry, setGeometry] = useState(null);
+  const tooltipRef = useRef(null);
+  const visibleRef = useRef(false);
+  const hasAutoStartedRef = useRef(false);
+  const previousReplayRef = useRef(replayToken);
+  const dismissRef = useRef(null);
+
+  const complete = useCallback(() => {
+    visibleRef.current = false;
+    setIsVisible(false);
+    setIsExiting(false);
+    setGeometry(null);
+    onActiveChange(false);
+    onComplete();
+  }, [onActiveChange, onComplete]);
+  dismissRef.current = complete;
+
+  const measure = useCallback(() => {
+    const target = targetRef.current;
+    if (!target) return;
+    const targetRect = target.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipRect = tooltipRef.current?.getBoundingClientRect();
+    const tooltipWidth = tooltipRect?.width || 270;
+    const tooltipHeight = tooltipRect?.height || 100;
+    if (targetRect.bottom <= 0 || targetRect.top >= viewportHeight) {
+      if (visibleRef.current) dismissRef.current?.();
+      return;
+    }
+
+    const left = Math.max(12, Math.min(viewportWidth - tooltipWidth - 12, targetRect.left + (targetRect.width - tooltipWidth) / 2));
+    const above = targetRect.top >= tooltipHeight + 22;
+    const top = above
+      ? targetRect.top - tooltipHeight - 26
+      : Math.max(12, Math.min(viewportHeight - tooltipHeight - 12, targetRect.bottom + 26));
+    const startX = Math.max(left + 22, Math.min(left + tooltipWidth - 22, targetRect.left + targetRect.width / 2));
+    const startY = above ? top + tooltipHeight : top;
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = above ? targetRect.top - 5 : targetRect.bottom + 5;
+    const curve = Math.max(18, Math.abs(endY - startY) * 0.48);
+    const controlY = above ? startY + curve : startY - curve;
+
+    setGeometry({
+      left,
+      top,
+      width: viewportWidth,
+      height: viewportHeight,
+      placement: above ? 'above' : 'below',
+      endX,
+      endY,
+      path: `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`,
+    });
+  }, [targetRef]);
+
+  useEffect(() => {
+    if (!ready || !targetRef.current) return undefined;
+    const isReplay = previousReplayRef.current !== replayToken;
+    previousReplayRef.current = replayToken;
+    if (!isReplay && (!initialAllowed || hasAutoStartedRef.current)) return undefined;
+
+    let startTimer;
+    let exitTimer;
+    let closeTimer;
+    let observer;
+    let cancelled = false;
+
+    const startGuide = () => {
+      if (cancelled || (visibleRef.current && !isReplay)) return;
+      const currentRect = targetRef.current?.getBoundingClientRect();
+      if (!currentRect || currentRect.bottom <= 0 || currentRect.top >= window.innerHeight) {
+        startTimer = undefined;
+        if (currentRect && 'IntersectionObserver' in window) {
+          observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+              observer?.disconnect();
+              waitUntilVisible();
+            }
+          }, { threshold: 0.1 });
+          observer.observe(targetRef.current);
+        } else if (currentRect) {
+          startTimer = window.setTimeout(startGuide, 300);
+        }
+        return;
+      }
+      if (!isReplay) hasAutoStartedRef.current = true;
+      visibleRef.current = true;
+      measure();
+      setIsExiting(false);
+      setAnimationKey((current) => current + 1);
+      setIsVisible(true);
+      onActiveChange(true);
+      exitTimer = window.setTimeout(() => setIsExiting(true), 6100);
+      closeTimer = window.setTimeout(complete, 6500);
+    };
+    const waitUntilVisible = () => {
+      if (startTimer || cancelled) return;
+      startTimer = window.setTimeout(startGuide, isReplay ? 0 : 950);
+    };
+    const rect = targetRef.current.getBoundingClientRect();
+    if (rect.bottom > 0 && rect.top < window.innerHeight) {
+      waitUntilVisible();
+    } else if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          waitUntilVisible();
+          observer?.disconnect();
+        }
+      }, { threshold: 0.1 });
+      observer.observe(targetRef.current);
+    } else {
+      waitUntilVisible();
+    }
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(startTimer);
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(closeTimer);
+      observer?.disconnect();
+    };
+  }, [ready, initialAllowed, replayToken, targetRef, measure, onActiveChange, complete]);
+
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const resizeObserver = new ResizeObserver(measure);
+    if (targetRef.current) resizeObserver.observe(targetRef.current);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    window.visualViewport?.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('scroll', measure);
+    measure();
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+      window.visualViewport?.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('scroll', measure);
+    };
+  }, [isVisible, measure, targetRef]);
+
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const dismissOnInteraction = (event) => {
+      if (event.target.closest?.('.dashboard-onboarding-tooltip, .guide-replay-button')) return;
+      if (event.target.closest?.('button, a, input, textarea, select, [role="button"], .room-card')) dismissRef.current?.();
+    };
+    const dismissOnKey = (event) => {
+      if (event.key === 'Escape') dismissRef.current?.();
+    };
+    const dismissOnScroll = () => dismissRef.current?.();
+    document.addEventListener('pointerdown', dismissOnInteraction);
+    document.addEventListener('keydown', dismissOnKey);
+    window.addEventListener('wheel', dismissOnScroll, { passive: true });
+    window.addEventListener('touchstart', dismissOnScroll, { passive: true });
+    return () => {
+      document.removeEventListener('pointerdown', dismissOnInteraction);
+      document.removeEventListener('keydown', dismissOnKey);
+      window.removeEventListener('wheel', dismissOnScroll);
+      window.removeEventListener('touchstart', dismissOnScroll);
+    };
+  }, [isVisible]);
+
+  if (!isVisible || !geometry) return null;
+
+  return <div className={`dashboard-onboarding-guide${isExiting ? ' is-exiting' : ''}`} key={animationKey}>
+    <svg className="dashboard-guide-connector" viewBox={`0 0 ${geometry.width} ${geometry.height}`} aria-hidden="true">
+      <path d={geometry.path} pathLength="1" />
+      <circle cx={geometry.endX} cy={geometry.endY} r="4" />
+    </svg>
+    <aside ref={tooltipRef} className={`dashboard-onboarding-tooltip is-${geometry.placement}`} role="status" style={{ left: geometry.left, top: geometry.top }}>
+      <span className="guide-indicator" />
+      <button className="guide-close" type="button" onClick={complete} aria-label="Dismiss getting started guide"><X size={13} /></button>
+      <strong>Let&apos;s get started</strong>
+      <p>Create your first room to bring your team together.</p>
+    </aside>
+  </div>;
+}
+
 function Dashboard() {
   const { session } = useSession();
   const { rooms, setRooms, loading, error, refresh } = useRooms();
   const navigate = useNavigate();
+  const newRoomButtonRef = useRef(null);
   const [dialog, setDialog] = useState('');
   const [roomName, setRoomName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const storageKey = `synkro-dashboard-onboarding:${session?.user?.id || session?.user?.email || 'user'}`;
+  const [guideSeen, setGuideSeen] = useState(() => readGuideDismissed(storageKey));
+  const [guideActive, setGuideActive] = useState(false);
+  const [guideReplayToken, setGuideReplayToken] = useState(0);
+  const persistGuideDismissal = useCallback(() => {
+    setGuideSeen(true);
+    try { window.localStorage.setItem(storageKey, 'true'); }
+    catch {}
+  }, [storageKey]);
+  const dismissGuide = useCallback(() => {
+    setGuideActive(false);
+    persistGuideDismissal();
+  }, [persistGuideDismissal]);
 
   const createRoom = async (event) => {
     event.preventDefault(); setBusy(true); setMessage('');
@@ -183,7 +429,28 @@ function Dashboard() {
     </section>
 
     <section className="workspace-section">
-      <div className="section-heading"><div><div className="section-kicker">YOUR SPACES</div><h2>Rooms <span className="count-pill">{rooms.length.toString().padStart(2, '0')}</span></h2></div><div className="section-actions"><GlassButton onClick={() => { setMessage(''); setDialog('join'); }}><ArrowDownLeft size={15} /> Join a room</GlassButton><GlassButton variant="primary" onClick={() => { setMessage(''); setDialog('create'); }}><Plus size={16} /> New room</GlassButton></div></div>
+      <div className="section-heading">
+        <div>
+          <div className="section-kicker">YOUR SPACES</div>
+          <div className="section-title-line">
+            <h2>Rooms <span className="count-pill">{rooms.length.toString().padStart(2, '0')}</span></h2>
+            <button className="guide-replay-button" type="button" onClick={() => setGuideReplayToken((current) => current + 1)}><RotateCcw size={14} /> Show me around</button>
+          </div>
+        </div>
+        <div className="section-actions">
+          <GlassButton onClick={() => { dismissGuide(); setMessage(''); setDialog('join'); }}><ArrowDownLeft size={19} /> Join a room</GlassButton>
+          <GlassButton ref={newRoomButtonRef} className={guideActive ? 'is-guide-target' : ''} variant="primary" onClick={() => { dismissGuide(); setMessage(''); setDialog('create'); }}><Plus size={20} /> New room</GlassButton>
+        </div>
+      </div>
+
+      <DashboardOnboardingGuide
+        targetRef={newRoomButtonRef}
+        ready={!loading}
+        initialAllowed={!guideSeen}
+        replayToken={guideReplayToken}
+        onActiveChange={setGuideActive}
+        onComplete={persistGuideDismissal}
+      />
 
       {error && <div className="inline-alert" role="alert"><span>{error}</span><GlassButton onClick={refresh}><RefreshCw size={14} /> Retry</GlassButton></div>}
       {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-create-card glass-panel" onClick={() => setDialog('create')}><span className="create-card-icon"><Plus size={19} /></span><strong>Start with a blank page</strong><small>Create a room for your next idea</small><ArrowUpRight className="create-arrow" size={17} /></button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
