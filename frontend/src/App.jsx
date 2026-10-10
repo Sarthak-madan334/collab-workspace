@@ -831,13 +831,15 @@ function LandingPage() {
       <div className="how-heading">
         <div className="how-heading-copy">
           <div className="eyebrow"><span className="eyebrow-line" /> THE FLOW</div>
-          <h2>Simple by design.<br /><span>Better together.</span></h2>
+          <div className="how-heading-title-row">
+            <h2>Simple by design.<br /><span>Better together.</span></h2>
+            <button ref={walkthroughTriggerRef} className="flow-launch-button" type="button" onClick={() => setWalkthroughOpen(true)}>
+              <Play size={13} fill="currentColor" /> <span>See how it works</span><small>7 sec</small>
+            </button>
+          </div>
         </div>
         <div className="how-heading-actions">
           <p>From the first room to the final revision, your team stays in sync without getting in the way.</p>
-          <button ref={walkthroughTriggerRef} className="flow-launch-button" type="button" onClick={() => setWalkthroughOpen(true)}>
-            <Play size={13} fill="currentColor" /> <span>See how it works</span><small>7 sec</small>
-          </button>
         </div>
       </div>
 
