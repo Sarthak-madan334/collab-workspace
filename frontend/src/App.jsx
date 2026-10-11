@@ -592,7 +592,37 @@ function SiteNavigation({ session, privacy = false }) {
 
 function LandingPage() {
   const { session } = useSession();
-  return <main className="landing-page">
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const page = document.querySelector('.landing-page:not(.privacy-page)');
+    if (!page) return undefined;
+    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-heading, .how-card, .landing-stack, .landing-cta, .site-footer');
+    page.classList.add('has-reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -35px 0px' });
+    items.forEach((item) => observer.observe(item));
+    return () => {
+      observer.disconnect();
+      page.classList.remove('has-reveal');
+      items.forEach((item) => item.classList.remove('is-visible'));
+    };
+  }, []);
+
+  const moveSpotlight = (event) => {
+    const card = event.target.closest('.landing-intro, .how-card, .landing-stack');
+    if (!card) return;
+    const bounds = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${event.clientX - bounds.left}px`);
+    card.style.setProperty('--my', `${event.clientY - bounds.top}px`);
+  };
+
+  return <main className="landing-page" onMouseMove={moveSpotlight}>
     <SiteNavigation session={session} />
 
     <section className="landing-hero" id="about">
