@@ -11,7 +11,6 @@ import {
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
-import ParticleStream from './ParticleStream.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -1116,14 +1115,39 @@ function LandingPage() {
     <SiteNavigation session={session} />
 
     <section className="landing-hero" id="about">
-      <ParticleStream />
       <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
-      <div className="landing-hero-art" aria-label="Illustration of a shared notes workspace">
-        <div className="hero-art-orbit hero-art-orbit-a" /><div className="hero-art-orbit hero-art-orbit-b" />
-        <div className="hero-window hero-window-left glass-panel"><div className="hero-window-top"><span>01 / ROOM</span><span className="hero-window-dot" /></div><div className="hero-window-title">A place to start.</div><div className="hero-window-lines"><i /><i /><i /><i /></div><div className="hero-window-tag"><PenLine size={12} /> shared notes</div></div>
-        <div className="hero-window hero-window-main glass-panel"><div className="hero-window-top"><span className="hero-live-label"><i /> TEAM SPACE · LIVE</span><MoreHorizontal size={16} /></div><div className="hero-note-title">Ideas in progress</div><p className="hero-note-copy">Good work gets better<br />when we make it together.</p><div className="hero-note-rule" /><div className="hero-collaborators"><div className="hero-avatar-group"><span className="avatar avatar-olive">A</span><span className="avatar avatar-lime">P</span><span className="avatar avatar-violet">T</span></div><span>3 people here</span><span className="hero-note-saved"><Check size={11} /> SAVED</span></div></div>
-        <div className="hero-window hero-window-history glass-panel"><div className="hero-window-top"><span>ROOM HISTORY</span><History size={13} /></div><div className="hero-history-row"><span className="hero-history-icon"><FileClock size={12} /></span><span><b>Version 08</b><small>A little earlier · You</small></span><ArrowUpRight size={13} /></div><div className="hero-history-row muted"><span className="hero-history-icon"><FileClock size={12} /></span><span><b>Version 07</b><small>Earlier today · Alie</small></span></div></div>
-        <div className="hero-art-caption"><span>ONE SHARED PAGE</span><span>ALWAYS FIND YOUR WAY BACK <i>✳</i></span></div>
+      <div className="landing-hero-art hero-showcase" aria-label="Animated preview of a shared Synkro workspace">
+        <div className="showcase-browser">
+          <div className="showcase-topbar">
+            <div className="showcase-window-controls" aria-hidden="true"><i /><i /><i /></div>
+            <div className="showcase-tab"><span className="showcase-tab-mark"><PenLine size={11} /></span> Design sprint</div>
+            <span className="showcase-topbar-lock"><LockKeyhole size={12} /> Private room</span>
+          </div>
+          <div className="showcase-content">
+            <aside className="showcase-sidebar">
+              <div className="showcase-workspace"><span><Users size={14} /></span> Team space <ChevronDown size={12} /></div>
+              <div className="showcase-sidebar-label">YOUR ROOMS</div>
+              <div className="showcase-room selected"><PenLine size={13} /> Design sprint <span>2</span></div>
+              <div className="showcase-room"><PenLine size={13} /> Team notes</div>
+              <div className="showcase-room"><Plus size={13} /> New room</div>
+              <div className="showcase-sidebar-presence"><span className="showcase-avatar avatar-a">A</span><span className="showcase-avatar avatar-p">P</span><span>2 teammates</span></div>
+            </aside>
+            <div className="showcase-editor">
+              <div className="showcase-editor-bar"><span className="showcase-editor-label">DESIGN SPRINT · SHARED NOTE</span><div className="showcase-editor-actions"><span className="showcase-avatar avatar-a">A</span><span className="showcase-avatar avatar-p">P</span><span className="showcase-editing-label">2 editing</span><MoreHorizontal size={15} /></div></div>
+              <div className="showcase-page">
+                <span className="showcase-page-label">DESIGN SPRINT <span>·</span> SHARED NOTES</span>
+                <h2>Ideas, made together.</h2>
+                <p className="showcase-intro">One shared page for the plan, the conversation, and every next step.</p>
+                <div className="showcase-rule" />
+                <h3>What should we make together?</h3>
+                <p className="showcase-typed-line">Let's bring every idea into one place: <span className="showcase-typed-phrase">then shape the plan together<span className="showcase-caret" /></span><span className="showcase-inline-name">Priya</span></p>
+                <p className="showcase-typed-line showcase-second-edit"><span className="showcase-selection">I'll add a first draft for us to refine.</span><span className="showcase-inline-name">Alex</span></p>
+                <div className="showcase-comment"><span className="showcase-avatar avatar-p">P</span><span><b>Priya added a comment</b><small>“Let’s add the first milestone here.”</small></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="showcase-caption"><span><Radio size={13} /> One shared page, always in sync</span><span>ROOM · NOTES · COMMENTS</span></div>
       </div>
       <a className="scroll-cue" href="#how-it-works"><span>SCROLL TO EXPLORE</span><ArrowDown size={13} /></a>
     </section>
