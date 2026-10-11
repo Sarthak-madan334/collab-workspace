@@ -1,10 +1,11 @@
 import { io } from 'socket.io-client';
 import { DEMO_MODE, DEMO_TOKEN, DEMO_USER, demoNote, demoSave, demoVersions } from './demo.js';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '');
 
 export function createWorkspaceSocket(token) {
   if (DEMO_MODE && token === DEMO_TOKEN) return new LocalDemoSocket();
+  if (!SOCKET_URL) throw new Error('The realtime server is not configured. Set VITE_SOCKET_URL for this deployment.');
   return io(SOCKET_URL, {
     autoConnect: false,
     auth: { token },

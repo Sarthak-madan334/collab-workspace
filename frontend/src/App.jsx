@@ -568,7 +568,12 @@ function RoomPage() {
 
   useEffect(() => {
     if (!session?.token || !note || pageError) return undefined;
-    const socket = createWorkspaceSocket(session.token);
+    let socket;
+    try { socket = createWorkspaceSocket(session.token); }
+    catch {
+      setConnection('error');
+      return undefined;
+    }
     socketRef.current = socket;
     let joined = false;
     let retryJoinTimer;
