@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
   History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, PenLine, Plus, Radio, RefreshCw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
+  LockKeyhole, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
+import ParticleStream from './ParticleStream.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -34,9 +35,9 @@ function Brand({ compact = false }) {
   </Link>;
 }
 
-function GlassButton({ children, className = '', variant = 'glass', ...props }) {
-  return <button className={`button button-${variant} ${className}`} {...props}>{children}</button>;
-}
+const GlassButton = forwardRef(function GlassButton({ children, className = '', variant = 'glass', ...props }, ref) {
+  return <button ref={ref} className={`button button-${variant} ${className}`} {...props}>{children}</button>;
+});
 
 function AuthShell({ children, mode }) {
   return <main className="auth-shell">
@@ -102,11 +103,13 @@ function AuthPage({ register = false }) {
 
 function AppFrame({ children }) {
   const { session, signOut } = useSession();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
   return <div className="app-shell">
+    {location.pathname === '/dashboard' && <AmbientParticles />}
     <header className="topbar glass-panel">
       <Brand />
       <nav className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
@@ -151,15 +154,259 @@ function useRooms() {
   return { rooms, setRooms, loading, error, refresh };
 }
 
+const AMBIENT_PARTICLES = Array.from({ length: 52 }, (_, index) => ({
+  id: index,
+  left: `${(index * 47 + 9) % 100}%`,
+  top: `${(index * 67 + 13) % 100}%`,
+  size: `${2 + (index % 2)}px`,
+  duration: `${11 + (index * 5) % 10}s`,
+  delay: `-${(index * 11) % 24}s`,
+  opacity: `${0.4 + (index % 4) * 0.07}`,
+  sway: `${((index * 13) % 69) - 34}px`,
+  rise: `${42 + (index * 11) % 84}px`,
+  tone: ['lime', 'moss', 'sage', 'grey'][index % 4],
+}));
+
+function AmbientParticles() {
+  const [pageHidden, setPageHidden] = useState(false);
+
+  useEffect(() => {
+    const updateVisibility = () => setPageHidden(document.hidden);
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
+  return <div className={`ambient-particles${pageHidden ? ' is-paused' : ''}`} aria-hidden="true">
+    {AMBIENT_PARTICLES.map((particle) => <span
+      key={particle.id}
+      className={`ambient-particle particle-${particle.tone}`}
+      style={{
+        left: particle.left,
+        top: particle.top,
+        width: particle.size,
+        height: particle.size,
+        '--particle-duration': particle.duration,
+        '--particle-delay': particle.delay,
+        '--particle-opacity': particle.opacity,
+        '--particle-sway': particle.sway,
+        '--particle-rise': particle.rise,
+      }}
+    />)}
+  </div>;
+}
+
+function readGuideDismissed(storageKey) {
+  try { return window.localStorage.getItem(storageKey) === 'true'; }
+  catch { return false; }
+}
+
+function DashboardOnboardingGuide({ targetRef, ready, initialAllowed, replayToken, onActiveChange, onComplete }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
+  const [geometry, setGeometry] = useState(null);
+  const tooltipRef = useRef(null);
+  const visibleRef = useRef(false);
+  const hasAutoStartedRef = useRef(false);
+  const previousReplayRef = useRef(replayToken);
+  const dismissRef = useRef(null);
+
+  const complete = useCallback(() => {
+    visibleRef.current = false;
+    setIsVisible(false);
+    setIsExiting(false);
+    setGeometry(null);
+    onActiveChange(false);
+    onComplete();
+  }, [onActiveChange, onComplete]);
+  dismissRef.current = complete;
+
+  const measure = useCallback(() => {
+    const target = targetRef.current;
+    if (!target) return;
+    const targetRect = target.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipRect = tooltipRef.current?.getBoundingClientRect();
+    const tooltipWidth = tooltipRect?.width || 320;
+    const tooltipHeight = tooltipRect?.height || 110;
+    if (targetRect.bottom <= 0 || targetRect.top >= viewportHeight) {
+      if (visibleRef.current) dismissRef.current?.();
+      return;
+    }
+
+    const left = Math.max(12, Math.min(viewportWidth - tooltipWidth - 12, targetRect.left + (targetRect.width - tooltipWidth) / 2));
+    const above = targetRect.top >= tooltipHeight + 22;
+    const top = above
+      ? targetRect.top - tooltipHeight - 26
+      : Math.max(12, Math.min(viewportHeight - tooltipHeight - 12, targetRect.bottom + 26));
+    const startX = Math.max(left + 22, Math.min(left + tooltipWidth - 22, targetRect.left + targetRect.width / 2));
+    const startY = above ? top + tooltipHeight : top;
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = above ? targetRect.top - 5 : targetRect.bottom + 5;
+    const curve = Math.max(18, Math.abs(endY - startY) * 0.48);
+    const controlY = above ? startY + curve : startY - curve;
+
+    setGeometry({
+      left,
+      top,
+      width: viewportWidth,
+      height: viewportHeight,
+      placement: above ? 'above' : 'below',
+      endX,
+      endY,
+      path: `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`,
+    });
+  }, [targetRef]);
+
+  useEffect(() => {
+    if (!ready || !targetRef.current) return undefined;
+    const isReplay = previousReplayRef.current !== replayToken;
+    previousReplayRef.current = replayToken;
+    if (!isReplay && (!initialAllowed || hasAutoStartedRef.current)) return undefined;
+
+    let startTimer;
+    let exitTimer;
+    let closeTimer;
+    let observer;
+    let cancelled = false;
+
+    const startGuide = () => {
+      if (cancelled || (visibleRef.current && !isReplay)) return;
+      const currentRect = targetRef.current?.getBoundingClientRect();
+      if (!currentRect || currentRect.bottom <= 0 || currentRect.top >= window.innerHeight) {
+        startTimer = undefined;
+        if (currentRect && 'IntersectionObserver' in window) {
+          observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+              observer?.disconnect();
+              waitUntilVisible();
+            }
+          }, { threshold: 0.1 });
+          observer.observe(targetRef.current);
+        } else if (currentRect) {
+          startTimer = window.setTimeout(startGuide, 300);
+        }
+        return;
+      }
+      if (!isReplay) hasAutoStartedRef.current = true;
+      visibleRef.current = true;
+      measure();
+      setIsExiting(false);
+      setAnimationKey((current) => current + 1);
+      setIsVisible(true);
+      onActiveChange(true);
+      exitTimer = window.setTimeout(() => setIsExiting(true), 6100);
+      closeTimer = window.setTimeout(complete, 6500);
+    };
+    const waitUntilVisible = () => {
+      if (startTimer || cancelled) return;
+      startTimer = window.setTimeout(startGuide, isReplay ? 0 : 950);
+    };
+    const rect = targetRef.current.getBoundingClientRect();
+    if (rect.bottom > 0 && rect.top < window.innerHeight) {
+      waitUntilVisible();
+    } else if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          waitUntilVisible();
+          observer?.disconnect();
+        }
+      }, { threshold: 0.1 });
+      observer.observe(targetRef.current);
+    } else {
+      waitUntilVisible();
+    }
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(startTimer);
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(closeTimer);
+      observer?.disconnect();
+    };
+  }, [ready, initialAllowed, replayToken, targetRef, measure, onActiveChange, complete]);
+
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const resizeObserver = new ResizeObserver(measure);
+    if (targetRef.current) resizeObserver.observe(targetRef.current);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    window.visualViewport?.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('scroll', measure);
+    measure();
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+      window.visualViewport?.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('scroll', measure);
+    };
+  }, [isVisible, measure, targetRef]);
+
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const dismissOnInteraction = (event) => {
+      if (event.target.closest?.('.dashboard-onboarding-tooltip, .guide-replay-button')) return;
+      if (event.target.closest?.('button, a, input, textarea, select, [role="button"], .room-card')) dismissRef.current?.();
+    };
+    const dismissOnKey = (event) => {
+      if (event.key === 'Escape') dismissRef.current?.();
+    };
+    const dismissOnScroll = () => dismissRef.current?.();
+    document.addEventListener('pointerdown', dismissOnInteraction);
+    document.addEventListener('keydown', dismissOnKey);
+    window.addEventListener('wheel', dismissOnScroll, { passive: true });
+    window.addEventListener('touchstart', dismissOnScroll, { passive: true });
+    return () => {
+      document.removeEventListener('pointerdown', dismissOnInteraction);
+      document.removeEventListener('keydown', dismissOnKey);
+      window.removeEventListener('wheel', dismissOnScroll);
+      window.removeEventListener('touchstart', dismissOnScroll);
+    };
+  }, [isVisible]);
+
+  if (!isVisible || !geometry) return null;
+
+  return <div className={`dashboard-onboarding-guide${isExiting ? ' is-exiting' : ''}`} key={animationKey}>
+    <svg className="dashboard-guide-connector" viewBox={`0 0 ${geometry.width} ${geometry.height}`} aria-hidden="true">
+      <path d={geometry.path} pathLength="1" />
+      <circle cx={geometry.endX} cy={geometry.endY} r="4" />
+    </svg>
+    <aside ref={tooltipRef} className={`dashboard-onboarding-tooltip is-${geometry.placement}`} role="status" style={{ left: geometry.left, top: geometry.top }}>
+      <span className="guide-indicator" />
+      <button className="guide-close" type="button" onClick={complete} aria-label="Dismiss getting started guide"><X size={13} /></button>
+      <strong>Let&apos;s get started</strong>
+      <p>Create your first room to bring your team together.</p>
+    </aside>
+  </div>;
+}
+
 function Dashboard() {
   const { session } = useSession();
   const { rooms, setRooms, loading, error, refresh } = useRooms();
   const navigate = useNavigate();
+  const newRoomButtonRef = useRef(null);
   const [dialog, setDialog] = useState('');
   const [roomName, setRoomName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const storageKey = `synkro-dashboard-onboarding:${session?.user?.id || session?.user?.email || 'user'}`;
+  const [guideSeen, setGuideSeen] = useState(() => readGuideDismissed(storageKey));
+  const [guideActive, setGuideActive] = useState(false);
+  const [guideReplayToken, setGuideReplayToken] = useState(0);
+  const persistGuideDismissal = useCallback(() => {
+    setGuideSeen(true);
+    try { window.localStorage.setItem(storageKey, 'true'); }
+    catch {}
+  }, [storageKey]);
+  const dismissGuide = useCallback(() => {
+    setGuideActive(false);
+    persistGuideDismissal();
+  }, [persistGuideDismissal]);
 
   const createRoom = async (event) => {
     event.preventDefault(); setBusy(true); setMessage('');
@@ -183,10 +430,35 @@ function Dashboard() {
     </section>
 
     <section className="workspace-section">
-      <div className="section-heading"><div><div className="section-kicker">YOUR SPACES</div><h2>Rooms <span className="count-pill">{rooms.length.toString().padStart(2, '0')}</span></h2></div><div className="section-actions"><GlassButton onClick={() => { setMessage(''); setDialog('join'); }}><ArrowDownLeft size={15} /> Join a room</GlassButton><GlassButton variant="primary" onClick={() => { setMessage(''); setDialog('create'); }}><Plus size={16} /> New room</GlassButton></div></div>
+      <div className="section-heading">
+        <div>
+          <div className="section-kicker">YOUR SPACES</div>
+          <div className="section-title-line">
+            <h2>Rooms <span className="count-pill">{rooms.length.toString().padStart(2, '0')}</span></h2>
+            <button className="guide-replay-button" type="button" onClick={() => setGuideReplayToken((current) => current + 1)}><RotateCcw size={14} /> Show me around</button>
+          </div>
+        </div>
+        <div className="section-actions">
+          <GlassButton onClick={() => { dismissGuide(); setMessage(''); setDialog('join'); }}><ArrowDownLeft size={19} /> Join a room</GlassButton>
+          <GlassButton ref={newRoomButtonRef} className={guideActive ? 'is-guide-target' : ''} variant="primary" onClick={() => { dismissGuide(); setMessage(''); setDialog('create'); }}><Plus size={20} /> New room</GlassButton>
+        </div>
+      </div>
+
+      <DashboardOnboardingGuide
+        targetRef={newRoomButtonRef}
+        ready={!loading}
+        initialAllowed={!guideSeen}
+        replayToken={guideReplayToken}
+        onActiveChange={setGuideActive}
+        onComplete={persistGuideDismissal}
+      />
 
       {error && <div className="inline-alert" role="alert"><span>{error}</span><GlassButton onClick={refresh}><RefreshCw size={14} /> Retry</GlassButton></div>}
-      {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-create-card glass-panel" onClick={() => setDialog('create')}><span className="create-card-icon"><Plus size={19} /></span><strong>Start with a blank page</strong><small>Create a room for your next idea</small><ArrowUpRight className="create-arrow" size={17} /></button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
+      {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
+        <div className="room-card-top"><span className="create-card-icon"><Plus size={19} /></span><ArrowUpRight className="create-arrow" size={17} /></div>
+        <div className="room-card-body"><span className="room-label">NEW ROOM</span><h3>Start with a blank page</h3><p>Create a room for your next idea</p></div>
+        <div className="room-card-footer"><span className="room-meta"><Plus size={14} /> Blank page</span><span className="room-open">Create room <ArrowRight size={14} /></span></div>
+      </button></div> : !error && <div className="empty-state glass-panel"><div className="empty-art"><div className="empty-art-ring" /><FilePlus2 size={28} /></div><span className="section-kicker">A FRESH PAGE</span><h3>Your first room is waiting.</h3><p>Create a room for a project, a study group, or simply the notes you want to share.</p><div className="empty-actions"><GlassButton variant="primary" onClick={() => setDialog('create')}><Plus size={15} /> Create your first room</GlassButton><button className="text-button" onClick={() => setDialog('join')}>I have an invite code <ArrowRight size={14} /></button></div></div>}
     </section>
 
     <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>{DEMO_MODE ? 'A local preview space.' : 'Small edits, all in sync.'}</strong><p>{DEMO_MODE ? 'Demo changes are saved only in this browser.' : 'Updates travel with your room, so nobody has to ask for the latest copy.'}</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local sample content · not connected to a team' : 'Your spaces are private to you and your team.'}</span></section>
@@ -590,8 +862,226 @@ function SiteNavigation({ session, privacy = false }) {
   </header>;
 }
 
+const walkthroughScenes = [
+  {
+    title: 'CREATE A ROOM',
+    heading: 'One room. Your whole team.',
+    copy: 'Create a space and bring everyone in.',
+  },
+  {
+    title: 'COLLABORATE LIVE',
+    heading: 'Every idea, in sync.',
+    copy: 'Write together and see changes appear.',
+  },
+  {
+    title: 'REVISIT YOUR WORK',
+    heading: 'Nothing gets lost.',
+    copy: 'Review earlier versions when you need them.',
+  },
+];
+
+function FlowWalkthrough({ onClose, exploreRoute }) {
+  const [elapsed, setElapsed] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const elapsedRef = useRef(0);
+  const closeButtonRef = useRef(null);
+  const autoPausedRef = useRef(false);
+  const finished = elapsed >= 7000;
+  const sceneIndex = elapsed < 2000 ? 0 : elapsed < 5000 ? 1 : elapsed < 7000 ? 2 : 3;
+  const scene = walkthroughScenes[sceneIndex];
+  const note = 'Let’s make the next idea count.';
+  const noteProgress = Math.max(0, Math.min(1, (elapsed - 2250) / 1900));
+  const typedNote = note.slice(0, Math.floor(note.length * noteProgress));
+  const restored = elapsed >= 6350;
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+      if (event.key === 'Tab') {
+        const focusable = document.querySelectorAll('.flow-walkthrough-dialog button:not(:disabled), .flow-walkthrough-dialog a[href]');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (isPaused || finished) return undefined;
+    let frameId;
+    let previousTime = performance.now();
+    const tick = (now) => {
+      const nextElapsed = Math.min(7000, elapsedRef.current + now - previousTime);
+      previousTime = now;
+      elapsedRef.current = nextElapsed;
+      setElapsed(nextElapsed);
+      if (nextElapsed < 7000) frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [isPaused, finished]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.hidden && !isPaused && !finished) {
+        autoPausedRef.current = true;
+        setIsPaused(true);
+      } else if (!document.hidden && autoPausedRef.current) {
+        autoPausedRef.current = false;
+        setIsPaused(false);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (document.hidden && !isPaused && !finished) {
+      autoPausedRef.current = true;
+      setIsPaused(true);
+    }
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [isPaused, finished]);
+
+  const replay = () => {
+    elapsedRef.current = 0;
+    setElapsed(0);
+    setIsPaused(false);
+    autoPausedRef.current = false;
+  };
+  const togglePlayback = () => {
+    autoPausedRef.current = false;
+    setIsPaused((paused) => !paused);
+  };
+  const elapsedTenths = Math.floor(elapsed / 100) / 10;
+  const progress = Math.min(100, (elapsed / 7000) * 100);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  return <div className="flow-walkthrough-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className={`flow-walkthrough-dialog${reducedMotion ? ' reduced-motion' : ''}${isPaused ? ' is-paused' : ''}`} role="dialog" aria-modal="true" aria-labelledby="flow-walkthrough-title" aria-describedby="flow-walkthrough-copy">
+      <button ref={closeButtonRef} className="flow-walkthrough-close" type="button" aria-label="Close walkthrough" onClick={onClose}><X size={18} /></button>
+      <div className="flow-walkthrough-topline">
+        <span className="flow-walkthrough-kicker"><i /> THE SYNKRO FLOW</span>
+        <span className="flow-walkthrough-time">{finished ? 'COMPLETE' : `${elapsedTenths.toFixed(1)} / 7.0 SEC`}</span>
+      </div>
+      <div className="flow-progress-track" role="progressbar" aria-label="Walkthrough progress" aria-valuemin="0" aria-valuemax="7" aria-valuenow={elapsedTenths}>
+        <span style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="flow-walkthrough-body">
+        <div className="flow-demo-stage" aria-label="Animated product walkthrough">
+          <div className={`flow-demo-scene scene-${sceneIndex}${finished ? ' is-finished' : ''}`} key={sceneIndex}>
+            {sceneIndex === 0 && <div className="flow-demo-room">
+              <div className="flow-demo-window-bar"><span>YOUR WORKSPACE</span><i /></div>
+              <div className="flow-demo-room-name">Design Sprint</div>
+              <div className="flow-demo-room-meta"><span>Shared room</span><span className="flow-demo-live"><i /> READY</span></div>
+              <div className="flow-demo-avatars" aria-label="Three participants joining">
+                <span className="mini-avatar avatar-olive">A</span><span className="mini-avatar avatar-lime">P</span><span className="mini-avatar avatar-violet">T</span>
+              </div>
+              <div className="flow-demo-room-footer"><Users size={12} /> Your team is here</div>
+            </div>}
+            {sceneIndex === 1 && <div className="flow-demo-editor">
+              <div className="flow-demo-window-bar"><span>DESIGN SPRINT / NOTES</span><span className="flow-demo-sync"><i /> SYNCED</span></div>
+              <div className="flow-demo-editor-title">Sprint notes</div>
+              <div className="flow-demo-note"><span>{typedNote}</span><i className="flow-demo-caret" /></div>
+              <div className="flow-demo-editor-bottom"><span className="mini-avatar avatar-olive">A</span><span className="flow-demo-cursor" /> <span className="mini-avatar avatar-lime">P</span><small>editing together</small></div>
+            </div>}
+            {sceneIndex === 2 && <div className={`flow-demo-history${restored ? ' is-restored' : ''}`}>
+              <div className="flow-demo-window-bar"><span>VERSION HISTORY</span><History size={13} /></div>
+              <div className="flow-demo-version"><span>08</span><b>Latest notes</b><small>NOW</small></div>
+              <div className={`flow-demo-version earlier${elapsed >= 5350 ? ' is-selected' : ''}`}><span>07</span><b>Project outline</b><small>10:42</small></div>
+              <div className="flow-demo-preview"><small>VERSION 07 PREVIEW</small><span>Launch with a focused first draft.</span></div>
+              <div className="flow-demo-restored"><Check size={11} /> Back to Project outline</div>
+            </div>}
+            {finished && <div className="flow-demo-finish" aria-hidden="true"><span><Check size={20} /></span><small>ONE TEAM. ONE SHARED PAGE.</small></div>}
+          </div>
+        </div>
+
+        <div className="flow-walkthrough-copy-block" aria-live="polite" aria-atomic="true">
+          {finished ? <>
+            <span className="flow-step-label">THE WHOLE FLOW</span>
+            <h2 id="flow-walkthrough-title">That&apos;s Synkro.</h2>
+            <p id="flow-walkthrough-copy">A calmer place to move good work forward.</p>
+          </> : <>
+            <span className="flow-step-label">0{sceneIndex + 1} <i /> {scene.title}</span>
+            <h2 id="flow-walkthrough-title">{scene.heading}</h2>
+            <p id="flow-walkthrough-copy">{scene.copy}</p>
+          </>}
+          <div className="flow-walkthrough-controls">
+            {!finished && <button className="flow-control-button flow-play-button" type="button" onClick={togglePlayback} aria-label={isPaused ? 'Resume walkthrough' : 'Pause walkthrough'}>
+              {isPaused ? <Play size={15} /> : <Pause size={15} />}<span>{isPaused ? 'Resume' : 'Pause'}</span>
+            </button>}
+            <button className="flow-control-button" type="button" onClick={replay}><RotateCcw size={15} /><span>Replay</span></button>
+            {finished && <Link className="flow-explore-button" to={exploreRoute} onClick={onClose}>Explore workspace <ArrowRight size={14} /></Link>}
+          </div>
+          {isPaused && !finished && <span className="flow-paused-note">PAUSED</span>}
+        </div>
+      </div>
+    </section>
+  </div>;
+}
+
 function LandingPage() {
   const { session } = useSession();
+  const [activeFlow, setActiveFlow] = useState(0);
+  const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  const walkthroughTriggerRef = useRef(null);
+  const closeWalkthrough = useCallback(() => {
+    setWalkthroughOpen(false);
+    requestAnimationFrame(() => walkthroughTriggerRef.current?.focus());
+  }, []);
+
+  const flowCards = [
+    {
+      step: '01',
+      icon: <Users size={17} />,
+      title: 'Bring everyone into one room',
+      description: 'Create a shared space for your project, study session, or next big idea.',
+      hint: 'Create or join',
+      route: session ? '/dashboard' : '/register',
+      kind: 'room',
+    },
+    {
+      step: '02',
+      icon: <Wifi size={17} />,
+      title: 'Work together, in real time',
+      description: 'Write on one shared page. Changes appear for everyone, so your ideas never fall out of sync.',
+      hint: 'Open notes',
+      route: session ? '/dashboard' : '/register',
+      kind: 'sync',
+    },
+    {
+      step: '03',
+      icon: <History size={17} />,
+      title: 'Every idea has a history',
+      description: 'Review previous versions, understand what changed, and restore an earlier note whenever you need it.',
+      hint: 'Review history',
+      route: session ? '/dashboard' : '/register',
+      kind: 'history',
+    },
+  ];
+
+  const onFlowKey = (event, index) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setActiveFlow(index);
+    }
+  };
+
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const page = document.querySelector('.landing-page:not(.privacy-page)');
@@ -626,6 +1116,7 @@ function LandingPage() {
     <SiteNavigation session={session} />
 
     <section className="landing-hero" id="about">
+      <ParticleStream />
       <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
       <div className="landing-hero-art" aria-label="Illustration of a shared notes workspace">
         <div className="hero-art-orbit hero-art-orbit-a" /><div className="hero-art-orbit hero-art-orbit-b" />
@@ -639,12 +1130,121 @@ function LandingPage() {
 
     <section className="landing-intro glass-panel" id="what-it-does"><div className="intro-index">01 <span>—</span> THE IDEA</div><div className="intro-content"><h2>Less passing files.<br /><span>More making progress.</span></h2><p>Teams often end up with notes scattered across chats and documents. Synkro gives a room one shared page, so everyone can follow the same thread, contribute as ideas arrive, and revisit earlier versions when plans change.</p></div><div className="intro-stamp"><span>MADE FOR</span><b>TEAMS<br />IN SYNC</b><i>✳</i></div></section>
 
-    <section className="how-section" id="how-it-works"><div className="how-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> THE FLOW</div><h2>Simple by design.<br /><span>Better together.</span></h2></div><p>Everything your team needs to get into a room and keep the work moving.</p></div>
-      <div className="how-grid">
-        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">01</span><span className="how-icon"><Users size={17} /></span></div><div className="how-card-art join-art"><div className="join-token"><span className="token-symbol">↗</span><span>YOUR TEAM'S ROOM</span></div><div className="join-avatars"><i>A</i><i>P</i><i>T</i><small>your people</small></div></div><h3>Make a room</h3><p>Create a private space for a project, a study session, or the next idea your team wants to work through.</p><span className="how-card-foot">CREATE OR JOIN <ArrowUpRight size={13} /></span></article>
-        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">02</span><span className="how-icon"><Wifi size={17} /></span></div><div className="how-card-art sync-art"><div className="sync-lines"><i /><i /><i /></div><div className="sync-pulse"><span /><span /><span /></div><span className="sync-status"><i /> LIVE TOGETHER</span></div><h3>Think out loud</h3><p>Write on one shared page. Updates appear for everyone in the room, with a live view of who's there.</p><span className="how-card-foot">WRITE · SEE · RESPOND <ArrowUpRight size={13} /></span></article>
-        <article className="how-card glass-panel"><div className="how-card-top"><span className="how-number">03</span><span className="how-icon"><History size={17} /></span></div><div className="how-card-art history-art"><div className="history-art-row"><span>08</span><i /><b>Latest notes</b><small>NOW</small></div><div className="history-art-row"><span>07</span><i /><b>Project outline</b><small>10:42</small></div><div className="history-art-row"><span>06</span><i /><b>First ideas</b><small>09:18</small></div><span className="history-art-restore"><RefreshCw size={12} /> PICK UP ANY VERSION</span></div><h3>Find your way back</h3><p>Saved versions help your team review how a note changed and restore an earlier version when needed.</p><span className="how-card-foot">HISTORY THAT HELPS <ArrowUpRight size={13} /></span></article>
+    <section className="how-section" id="how-it-works">
+      <div className="how-heading">
+        <div className="how-heading-copy">
+          <div className="eyebrow"><span className="eyebrow-line" /> THE FLOW</div>
+          <div className="how-heading-title-row">
+            <h2>Simple by design.<br /><span>Better together.</span></h2>
+            <button ref={walkthroughTriggerRef} className="flow-launch-button" type="button" onClick={() => setWalkthroughOpen(true)}>
+              <Play size={13} fill="currentColor" /> <span>See how it works</span><small>7 sec</small>
+            </button>
+          </div>
+        </div>
+        <div className="how-heading-actions">
+          <p>From the first room to the final revision, your team stays in sync without getting in the way.</p>
+        </div>
       </div>
+
+      <div className="how-grid">
+        {flowCards.map((card, index) => (
+          <article
+            key={card.step}
+            className={`how-card glass-panel ${activeFlow === index ? 'is-active' : ''}`}
+            onClick={() => setActiveFlow(index)}
+            onKeyDown={(event) => onFlowKey(event, index)}
+            tabIndex={0}
+            role="button"
+            aria-pressed={activeFlow === index}
+            aria-expanded={activeFlow === index}
+          >
+            <div className="how-card-top">
+              <span className="how-number">{card.step}</span>
+              <span className="how-icon">{card.icon}</span>
+            </div>
+
+            <div className={`how-card-art ${card.kind}-art ${activeFlow === index ? 'is-active' : ''}`}>
+              {card.kind === 'room' && (
+                <div className="mini-room-demo">
+                  <div className="mini-room-header">
+                    <span>Design Sprint</span>
+                    <span className="mini-live"><i /> live</span>
+                  </div>
+                  <div className="mini-room-avatars">
+                    <span className="mini-avatar avatar-olive">A</span>
+                    <span className="mini-avatar avatar-lime">P</span>
+                    <span className="mini-avatar avatar-violet">T</span>
+                    <span className="mini-avatar avatar-color-3">N</span>
+                  </div>
+                  <div className="mini-room-code"><span>ROOM CODE</span><strong>ST-291</strong></div>
+                </div>
+              )}
+
+              {card.kind === 'sync' && (
+                <div className="mini-sync-demo">
+                  <div className="mini-sync-lines"><i /><i /><i /></div>
+                  <div className="mini-sync-editor">
+                    <div className="mini-sync-toolbar">
+                      <span className="mini-dot" />
+                      <span>shared note</span>
+                    </div>
+                    <div className="mini-sync-text">
+                      <span className={`mini-typed ${activeFlow === index ? 'is-typing' : ''}`}>Let’s ship the draft before Friday.</span>
+                    </div>
+                  </div>
+                  <div className="mini-sync-people">
+                    <span className="mini-avatar avatar-olive">A</span>
+                    <span className="mini-avatar avatar-lime">P</span>
+                    <span className="mini-avatar avatar-violet">T</span>
+                  </div>
+                  <span className="mini-sync-status"><span className="status-dot" /> synced</span>
+                </div>
+              )}
+
+              {card.kind === 'history' && (
+                <div className="mini-history-demo">
+                  <div className={`mini-history-row is-selected ${activeFlow === index ? 'is-active' : ''}`}>
+                    <span>08</span>
+                    <i />
+                    <b>Latest notes</b>
+                    <small>NOW</small>
+                  </div>
+                  <div className="mini-history-row">
+                    <span>07</span>
+                    <i />
+                    <b>Project outline</b>
+                    <small>10:42</small>
+                  </div>
+                  <div className="mini-history-row">
+                    <span>06</span>
+                    <i />
+                    <b>First ideas</b>
+                    <small>09:18</small>
+                  </div>
+                  <div className="mini-history-panel">
+                    <span>Restored</span>
+                    <strong>Version 08</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <h3>{card.title}</h3>
+            <p>{card.description}</p>
+
+            <div className="how-card-footer">
+              <Link
+                className="how-card-foot"
+                to={card.route}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {card.hint} <ArrowUpRight size={13} />
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
+      {walkthroughOpen && <FlowWalkthrough onClose={closeWalkthrough} exploreRoute={session ? '/dashboard' : '/register'} />}
     </section>
 
     <section className="landing-stack glass-panel"><div className="stack-symbol"><Database size={18} /></div><div className="stack-copy"><span className="section-kicker">THE FOUNDATION</span><h2>Built for a shared page.</h2><p>React and JavaScript on the frontend. Node.js and Socket.IO carry live updates. MongoDB Atlas keeps rooms, notes, and revision history together.</p></div><div className="stack-pills"><span>REACT</span><span>NODE.JS</span><span>SOCKET.IO</span><span>MONGODB ATLAS</span></div></section>
