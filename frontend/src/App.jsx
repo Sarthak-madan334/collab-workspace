@@ -1287,7 +1287,19 @@ function LandingPage() {
       </div>
     </section>
 
-    <section className="landing-cta glass-panel"><div className="cta-orbit" /><span className="section-kicker">START WITH ONE ROOM</span><h2>Make room for<br /><span>what's next.</span></h2><p>Bring your team together around one shared page.</p><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>{session ? 'Open your workspace' : 'Create your account'} <ArrowRight size={15} /></Link><span className="cta-spark">✳</span></section>
+    <section className="landing-cta glass-panel">
+      <div className="cta-orbit cta-orbit-left" aria-hidden="true" />
+      <div className="cta-orbit cta-orbit-right" aria-hidden="true" />
+      <span className="cta-star cta-star-1" aria-hidden="true" /><span className="cta-star cta-star-2" aria-hidden="true" /><span className="cta-star cta-star-3" aria-hidden="true" /><span className="cta-star cta-star-4" aria-hidden="true" /><span className="cta-star cta-star-5" aria-hidden="true" /><span className="cta-star cta-star-6" aria-hidden="true" /><span className="cta-star cta-star-7" aria-hidden="true" /><span className="cta-star cta-star-8" aria-hidden="true" /><span className="cta-star cta-star-9" aria-hidden="true" />
+      <div className="cta-chip cta-chip-left" aria-hidden="true"><span className="cta-chip-avatar">JS</span><span>Product Brief</span><svg className="cta-cursor" viewBox="0 0 18 22"><path d="M2 1.5v15l4.1-3.8 2.4 6.1 2.5-1-2.5-5.8 5.7-.4L2 1.5Z" /></svg></div>
+      <div className="cta-chip cta-chip-right" aria-hidden="true"><span className="cta-chip-avatar">MK</span><span>Notes</span><svg className="cta-cursor" viewBox="0 0 18 22"><path d="M2 1.5v15l4.1-3.8 2.4 6.1 2.5-1-2.5-5.8 5.7-.4L2 1.5Z" /></svg></div>
+      <div className="cta-earth" aria-hidden="true" />
+      <span className="section-kicker">START WITH ONE ROOM</span>
+      <h2>Make room for<br /><span>what's next.</span></h2>
+      <p>Bring your team together around one shared page.</p>
+      <Link className="button button-primary" to={session ? '/dashboard' : '/register'}>{session ? 'Open your workspace' : 'Create your account'} <ArrowRight size={15} /></Link>
+      <span className="cta-spark" aria-hidden="true">✳</span>
+    </section>
     <SiteFooter />
   </main>;
 }
