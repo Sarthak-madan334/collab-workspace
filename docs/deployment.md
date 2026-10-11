@@ -1,18 +1,16 @@
 # Deployment: Vercel, Render, and MongoDB Atlas
 
-This is a deployment runbook for the current frontend and the planned backend. No service has been created or deployed. In the current checkout, `frontend/` contains the only `package.json`; there is no `server/` directory or backend package yet.
-
-The frontend is React + Vite, not Next.js. The Vercel error “No Next.js version detected” means the Vercel project is using the wrong framework preset or root directory; do not install Next.js. Set the Vercel project settings below in the Vercel dashboard. They cannot be changed remotely from this repository.
+This is the planned deployment runbook. No service has been created or deployed. Settings assume the `frontend/` and `server/` layout in [local development](local-development.md).
 
 ## Hosting contract
 
 | Component | Host | Configuration |
 | --- | --- | --- |
-| React frontend | Vercel | Root `frontend`, Vite preset, install `npm install`, build `npm run build`, output `dist` |
-| Node.js + Socket.IO | Not in this checkout | Planned separate service; no server package can currently be deployed |
-| Database | MongoDB Atlas | Planned for the backend; no database service is configured by this frontend repository |
+| React frontend | Vercel | Root `frontend`, Vite preset, build `npm run build`, output `dist` |
+| Node.js + Socket.IO | Render web service | Root `server`, build `npm ci`, start `npm start`, health `/health/ready` |
+| Database | MongoDB Atlas | Separate production database and scoped application user |
 
-When a backend is available, use its direct public origin for both HTTP and Socket.IO. Vercel serves only the client build; do not place database credentials or other server secrets in frontend build settings.
+Use the backend's direct public origin for both HTTP and Socket.IO. This architecture keeps the persistent realtime server on Render as requested. Vercel serves the client build; do not place application API credentials in frontend build settings.
 
 ## 1. Prepare Atlas
 
@@ -20,9 +18,9 @@ Create the planned Atlas free-tier deployment if available and suitable for the 
 
 Initialize indexes and test a note/version transaction. Never store durable notes on the Render filesystem. Monitor storage because full snapshots accumulate rapidly.
 
-## 2. Planned backend deployment
+## 2. Deploy Render backend
 
-This step is not actionable from the current checkout because there is no `server/` package. Once implemented, deploy it as a separate Node service (for example, on Render) using its actual package scripts. The planned environment variables are `NODE_ENV`, `PORT`, `MONGODB_URI`, `MONGODB_DB_NAME`, `SESSION_TTL_HOURS`, `LOG_LEVEL`, and `CLIENT_ORIGINS`.
+Connect the intended Git repository and select the agreed release branch. Use a Node web service, root `server`, `npm ci`, and `npm start`; no transpilation build is required by the proposed JavaScript server. Pin the same Node major as local development. Set `NODE_ENV=production`, `MONGODB_URI`, `MONGODB_DB_NAME=synkro_prod`, `SESSION_TTL_HOURS=8`, `LOG_LEVEL=info`, and the exact frontend origin in `CLIENT_ORIGINS`.
 
 The server must bind to `0.0.0.0` and Render's supplied `PORT`. HTTP and Socket.IO share this port. Configure `/health/ready` and retain one instance. See [Render web-service configuration](https://render.com/docs/web-services).
 
@@ -30,24 +28,16 @@ If the frontend domain is not known yet, deploy the backend with an empty browse
 
 Render supports WebSocket connections, but replacement instances close existing connections. The application must reconnect and resync after deploys; see [Render WebSockets](https://render.com/docs/websocket). A free Render web service can spin down after inactivity and take time to restart. Treat cold starts as a separate UX/test condition and review current plan limits before the demo; see [Render free services](https://render.com/docs/free).
 
-## 3. Configure the Vercel frontend
+## 3. Deploy Vercel frontend
 
-In **Project Settings → Build and Deployment** configure:
-
-- Root Directory: `frontend` (enable “Include source files outside of the Root Directory” only if Vercel requests it; the frontend builds independently)
-- Framework Preset: `Vite`
-- Install Command: `npm install`
-- Build Command: `npm run build`
-- Output Directory: `dist`
-
-In **Project Settings → Environment Variables**, add the public backend URLs for Production and for any Preview environment that has an approved backend:
+Import the repository, select root `frontend`, choose Vite, and use build `npm run build` with output `dist`. Set:
 
 ```dotenv
 VITE_API_BASE_URL=https://<backend>.onrender.com/api/v1
 VITE_SOCKET_URL=https://<backend>.onrender.com
 ```
 
-These are public build-time values. Rebuild after changing them. Without them, the production client now reports a clear configuration error rather than silently targeting `localhost`. The existing `frontend/vercel.json` SPA fallback lets direct navigation to React Router routes work:
+These are public build-time values. Rebuild after changing them. The `frontend/vercel.json` SPA fallback lets direct navigation to React Router routes work:
 
 ```json
 {

@@ -1,4 +1,4 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:4000/api/v1' : '')).replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1').replace(/\/$/, '');
 import {
   DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD, DEMO_TOKEN, DEMO_USER,
   demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
@@ -14,10 +14,6 @@ export class ApiError extends Error {
 }
 
 export async function request(path, { token, ...options } = {}) {
-  if (!API_BASE) {
-    throw new ApiError('The workspace API is not configured. Set VITE_API_BASE_URL for this deployment.', 'CONFIGURATION_ERROR', 0);
-  }
-
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
