@@ -211,14 +211,14 @@ function RoomCard({ room, index }) {
 }
 
 function Modal({ title, subtitle, children, onClose }) {
-  const closeRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event) => { if (event.key === 'Escape') onCloseRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button ref={closeRef} className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
+  }, []);
+  return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
 }
 
 function RoomPage() {
