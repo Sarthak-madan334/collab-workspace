@@ -3,9 +3,9 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } fr
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
-  ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
+  Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
   History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
+  LockKeyhole, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
@@ -1086,7 +1086,7 @@ function LandingPage() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const page = document.querySelector('.landing-page:not(.privacy-page)');
     if (!page) return undefined;
-    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-heading, .how-card, .landing-stack, .landing-cta, .site-footer');
+    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-heading, .how-card, .foundation-card, .landing-stack, .landing-cta, .site-footer');
     page.classList.add('has-reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -1105,7 +1105,7 @@ function LandingPage() {
   }, []);
 
   const moveSpotlight = (event) => {
-    const card = event.target.closest('.landing-intro, .how-card, .landing-stack');
+    const card = event.target.closest('.landing-intro, .how-card, .foundation-card, .landing-stack');
     if (!card) return;
     const bounds = card.getBoundingClientRect();
     card.style.setProperty('--mx', `${event.clientX - bounds.left}px`);
@@ -1247,7 +1247,45 @@ function LandingPage() {
       {walkthroughOpen && <FlowWalkthrough onClose={closeWalkthrough} exploreRoute={session ? '/dashboard' : '/register'} />}
     </section>
 
-    <section className="landing-stack glass-panel"><div className="stack-symbol"><Database size={18} /></div><div className="stack-copy"><span className="section-kicker">THE FOUNDATION</span><h2>Built for a shared page.</h2><p>React and JavaScript on the frontend. Node.js and Socket.IO carry live updates. MongoDB Atlas keeps rooms, notes, and revision history together.</p></div><div className="stack-pills"><span>REACT</span><span>NODE.JS</span><span>SOCKET.IO</span><span>MONGODB ATLAS</span></div></section>
+    <section className="landing-foundation" id="foundation" aria-labelledby="foundation-title">
+      <div className="foundation-heading">
+        <div className="foundation-heading-copy">
+          <div className="eyebrow"><span className="eyebrow-line" /> UNDER THE HOOD</div>
+          <h2 id="foundation-title">Simple on the surface.<br /><span>Powerful underneath.</span></h2>
+        </div>
+        <p>Four technologies working together to keep your team&apos;s workspace connected, responsive, and organized.</p>
+      </div>
+      <div className="foundation-grid">
+        <article className="foundation-card foundation-card-react">
+          <div className="foundation-card-top"><span className="foundation-number">01</span><span className="foundation-icon"><Monitor size={19} aria-hidden="true" /></span></div>
+          <span className="foundation-kind">INTERFACE</span>
+          <h3>React</h3>
+          <p>Builds the workspace interface and the controls your team uses.</p>
+          <div className="foundation-flow"><span>UI</span><ArrowRight size={14} aria-hidden="true" /><span>Your workspace</span></div>
+        </article>
+        <article className="foundation-card foundation-card-realtime">
+          <div className="foundation-card-top"><span className="foundation-number">02</span><span className="foundation-icon"><Activity size={19} aria-hidden="true" /></span></div>
+          <span className="foundation-kind">SERVER + EVENTS</span>
+          <h3>Node.js + Socket.IO</h3>
+          <p>The frontend supports room requests and live note events when a backend is configured. This repository does not include the server.</p>
+          <div className="foundation-flow"><span>HTTP + events</span><ArrowRight size={14} aria-hidden="true" /><span>Backend</span></div>
+        </article>
+        <article className="foundation-card foundation-card-data">
+          <div className="foundation-card-top"><span className="foundation-number">03</span><span className="foundation-icon"><Database size={19} aria-hidden="true" /></span></div>
+          <span className="foundation-kind">PLANNED STORAGE</span>
+          <h3>MongoDB Atlas</h3>
+          <p>Specified for storing rooms, notes, and revision history in the planned backend.</p>
+          <div className="foundation-flow"><span>Planned</span><ArrowRight size={14} aria-hidden="true" /><span>Persistent data</span></div>
+        </article>
+        <article className="foundation-card foundation-card-team">
+          <div className="foundation-card-top"><span className="foundation-number">04</span><span className="foundation-icon"><Users size={19} aria-hidden="true" /></span></div>
+          <span className="foundation-kind">THE RESULT</span>
+          <h3>Your team</h3>
+          <p>One shared room for notes, presence, and history. Live cross-user sync depends on a configured backend.</p>
+          <div className="foundation-flow"><span>Result</span><ArrowRight size={14} aria-hidden="true" /><span>Work together</span></div>
+        </article>
+      </div>
+    </section>
 
     <section className="landing-cta glass-panel"><div className="cta-orbit" /><span className="section-kicker">START WITH ONE ROOM</span><h2>Make room for<br /><span>what's next.</span></h2><p>Bring your team together around one shared page.</p><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>{session ? 'Open your workspace' : 'Create your account'} <ArrowRight size={15} /></Link><span className="cta-spark">✳</span></section>
     <SiteFooter />
