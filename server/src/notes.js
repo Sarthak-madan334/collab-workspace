@@ -23,7 +23,7 @@ export function createNoteService(db, client, auth, rooms, queue, publish = () =
       await rooms.access(actor.user._id, id);
       const result = await transaction(client, async (session) => {
         await rooms.access(actor.user._id, id, false, session);
-        const existing = await versions.findOne({ roomId: id, operationId: op }, { session });
+        const existing = await versions.findOne({ roomId: id, operationId: op }, { session, projection: { authorId: 1, requestHash: 1, revision: 1, kind: 1 } });
         if (existing) {
           assert(existing.authorId.equals(actor.user._id) && existing.requestHash === requestHash, 409, 'OPERATION_ID_REUSED', 'Operation ID was already used');
           return { appliedRevision: existing.revision, current: await notes.findOne({ roomId: id }, { session }), kind: existing.kind, committedNow: false };
@@ -53,7 +53,7 @@ export function createNoteService(db, client, auth, rooms, queue, publish = () =
     const op = operationId(payload.operationId);
     await rooms.access(userId, id);
     const [found, note] = await Promise.all([
-      versions.findOne({ roomId: id, operationId: op }), notes.findOne({ roomId: id }),
+      versions.findOne({ roomId: id, operationId: op }, { projection: { authorId: 1, revision: 1 } }), notes.findOne({ roomId: id }),
     ]);
     assert(note, 503, 'SERVICE_UNAVAILABLE', 'Room note unavailable');
     const owned = found && found.authorId.equals(typeof userId === 'string' ? objectId(userId) : userId);
@@ -65,7 +65,7 @@ export function createNoteService(db, client, auth, rooms, queue, publish = () =
     const max = limit(query.limit);
     const before = beforeRevision(query.beforeRevision);
     const filter = { roomId: room._id, ...(before === undefined ? {} : { revision: { $lt: before } }) };
-    const rows = await versions.find(filter).sort({ revision: -1 }).limit(max + 1).toArray();
+    const rows = await versions.find(filter, { projection: { revision: 1, authorId: 1, kind: 1, createdAt: 1, restoredFromRevision: 1 } }).sort({ revision: -1 }).limit(max + 1).toArray();
     const page = rows.slice(0, max);
     const authorRows = await users.find({ _id: { $in: page.map((row) => row.authorId) } }, { projection: { name: 1 } }).toArray();
     const authors = new Map(authorRows.map((author) => [author._id.toString(), author.name]));
@@ -104,7 +104,7 @@ export function createNoteService(db, client, auth, rooms, queue, publish = () =
       await rooms.access(actor.user._id, id, true);
       const result = await transaction(client, async (session) => {
         await rooms.access(actor.user._id, id, true, session);
-        const existing = await versions.findOne({ roomId: id, operationId: op }, { session });
+        const existing = await versions.findOne({ roomId: id, operationId: op }, { session, projection: { authorId: 1, requestHash: 1, revision: 1 } });
         if (existing) {
           assert(existing.authorId.equals(actor.user._id) && existing.requestHash === requestHash, 409, 'OPERATION_ID_REUSED', 'Operation ID was already used');
           return { appliedRevision: existing.revision, current: await notes.findOne({ roomId: id }, { session }), committedNow: false };

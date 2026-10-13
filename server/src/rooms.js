@@ -35,7 +35,7 @@ export function createRoomService(db, client, auth, queue) {
     const roomId = new ObjectId();
     const now = new Date();
     const code = randomBytes(16).toString('base64url');
-    const room = { _id: roomId, name, ownerId: actor.user._id, inviteCode: code, createdAt: now, updatedAt: now };
+    const room = { _id: roomId, name, ownerId: actor.user._id, inviteCode: code, inviteRedemptions: 0, createdAt: now, updatedAt: now };
     await transaction(client, async (session) => {
       await rooms.insertOne(room, { session });
       await memberships.insertOne({ roomId, userId: actor.user._id, joinedAt: now }, { session });
@@ -52,24 +52,35 @@ export function createRoomService(db, client, auth, queue) {
   async function join(token, payload) {
     object(payload, ['inviteCode']);
     const code = validateInvite(payload.inviteCode);
-    const candidate = await rooms.findOne({ inviteCode: code });
+    const candidate = await rooms.findOne({ inviteCode: code }, { projection: { _id: 1 } });
     assert(candidate, 404, 'INVALID_INVITE', 'Invite not found');
     return queue.run(candidate._id.toString(), async () => {
       const actor = await auth.authenticate(token);
-      const room = await rooms.findOne({ _id: candidate._id });
-      assert(room && room.inviteCode === code, 404, 'INVALID_INVITE', 'Invite not found');
       try {
-        await memberships.updateOne(
-          { roomId: room._id, userId: actor.user._id },
-          { $setOnInsert: { roomId: room._id, userId: actor.user._id, joinedAt: new Date() } },
-          { upsert: true },
-        );
+        const room = await transaction(client, async (session) => {
+          // A write to the room fences invite rotation across server instances.
+          const current = await rooms.findOneAndUpdate(
+            { _id: candidate._id, inviteCode: code },
+            { $inc: { inviteRedemptions: 1 } },
+            { session, returnDocument: 'after' },
+          );
+          assert(current, 404, 'INVALID_INVITE', 'Invite not found');
+          await memberships.updateOne(
+            { roomId: current._id, userId: actor.user._id },
+            { $setOnInsert: { roomId: current._id, userId: actor.user._id, joinedAt: new Date() } },
+            { upsert: true, session },
+          );
+          return current;
+        });
+        return { room: roomShape(room) };
       } catch (err) {
         if (!isDuplicateKey(err)) throw err;
-        const existing = await memberships.findOne({ roomId: room._id, userId: actor.user._id });
+        const existing = await memberships.findOne({ roomId: candidate._id, userId: actor.user._id });
         if (!existing) throw err;
+        const room = await rooms.findOne({ _id: candidate._id, inviteCode: code });
+        assert(room, 404, 'INVALID_INVITE', 'Invite not found');
+        return { room: roomShape(room) };
       }
-      return { room: roomShape(room) };
     });
   }
 

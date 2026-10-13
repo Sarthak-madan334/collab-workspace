@@ -7,6 +7,8 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
   const maxSocketsPerUser = 8;
   const maxSocketsTotal = 1000;
   const maxRoomsPerSocket = 20;
+  const maxPendingPerSocket = 8;
+  const maxPendingTotal = 256;
   const clientAddress = (request) => {
     const forwarded = request.headers['x-forwarded-for'];
     if (config.trustProxyHops > 0 && typeof forwarded === 'string') {
@@ -80,8 +82,14 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
     userSockets.add(socket);
     const timer = setTimeout(() => expire(socket), Math.max(0, expiresAt - Date.now()));
     timer.unref?.();
+    let pendingEvents = 0;
 
     const event = (name, handler) => socket.on(name, (payload, ack) => {
+      if (pendingEvents >= maxPendingPerSocket || activeHandlers.size >= maxPendingTotal) {
+        if (typeof ack === 'function') ack({ ok: false, error: { code: 'RATE_LIMITED', message: 'Server is busy. Try again shortly' } });
+        return;
+      }
+      pendingEvents += 1;
       const pending = (async () => {
         try {
           assert(ready(), 503, 'SERVICE_UNAVAILABLE', 'Server is shutting down');
@@ -97,7 +105,8 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
         }
       })();
       activeHandlers.add(pending);
-      pending.then(() => activeHandlers.delete(pending), () => activeHandlers.delete(pending));
+      const finished = () => { pendingEvents -= 1; activeHandlers.delete(pending); };
+      pending.then(finished, finished);
     });
     const roomPayload = (payload) => { object(payload, ['roomId']); return objectId(payload.roomId).toString(); };
     const requireJoined = (roomId) => assert(presence.has(roomId, socket.id), 403, 'ROOM_NOT_JOINED', 'Join this room first');
@@ -111,6 +120,7 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
         assert(socket.connected, 503, 'SERVICE_UNAVAILABLE', 'Connection closed');
         assert(presence.has(roomId, socket.id) || presence.roomsFor(socket.id).length < maxRoomsPerSocket, 429, 'RATE_LIMITED', 'Too many joined rooms');
         await socket.join(roomId);
+        assert(socket.connected, 503, 'SERVICE_UNAVAILABLE', 'Connection closed');
         const changed = presence.add(roomId, socket.id, user);
         if (changed) publishPresence(roomId);
         const { users, presenceSequence } = presence.snapshot(roomId);

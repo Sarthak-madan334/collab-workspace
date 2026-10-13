@@ -14,7 +14,9 @@ test('socket origin, membership, presence, and session revocation', async (t) =>
   const sessionId = '111111111111111111111111';
   const user = { _id: { toString: () => userId }, name: 'Alice' };
   let revoked = false;
+  let eventGate;
   const auth = { authenticate: async (token) => {
+    if (eventGate) await eventGate;
     if (token === 'db-down') throw new Error('database unavailable');
     if (token !== 'valid' || revoked) throw error(401, 'UNAUTHENTICATED', 'Sign in again');
     return { user, session: { _id: { toString: () => sessionId }, expiresAt: new Date(Date.now() + 60_000) } };
@@ -30,6 +32,18 @@ test('socket origin, membership, presence, and session revocation', async (t) =>
   const socketServer = createSocketServer(server, { origins: new Set(['http://localhost:5173']) }, {
     auth, rooms, notes: { apply: async () => { throw new Error('Should not edit'); }, status: async () => ({ committed: false }) },
     queue: new RoomQueue(), presence, limiter: new RateLimiter(), ready: () => ready,
+  });
+  let delayJoin = false;
+  let releaseJoin;
+  let enteredJoin;
+  socketServer.io.on('connection', (peer) => {
+    if (!delayJoin) return;
+    const join = peer.join.bind(peer);
+    peer.join = async (room) => {
+      enteredJoin();
+      await new Promise((resolve) => { releaseJoin = resolve; });
+      return join(room);
+    };
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => socketServer.io.close(resolve)));
@@ -58,6 +72,24 @@ test('socket origin, membership, presence, and session revocation', async (t) =>
   t.after(() => second.disconnect());
   await second.emitWithAck('room:join', { roomId });
   assert.equal(presence.snapshot(roomId).users.length, 1);
+  delayJoin = true;
+  const reachedJoin = new Promise((resolve) => { enteredJoin = resolve; });
+  const disconnectedDuringJoin = await connect('valid');
+  disconnectedDuringJoin.emit('room:join', { roomId });
+  await reachedJoin;
+  disconnectedDuringJoin.disconnect();
+  releaseJoin();
+  await socketServer.drain();
+  assert.equal(presence.snapshot(roomId).users.length, 1);
+  delayJoin = false;
+  let releaseEvents;
+  eventGate = new Promise((resolve) => { releaseEvents = resolve; });
+  const pending = Array.from({ length: 8 }, () => second.emitWithAck('note:status', { roomId }));
+  const overloaded = await second.emitWithAck('note:status', { roomId });
+  assert.equal(overloaded.error.code, 'RATE_LIMITED');
+  releaseEvents();
+  await Promise.all(pending);
+  eventGate = null;
   await first.emitWithAck('room:leave', { roomId });
   assert.equal(presence.snapshot(roomId).users.length, 1);
   const extraSockets = [];

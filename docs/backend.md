@@ -32,6 +32,8 @@ Use one bounded queue per active room shared by socket edits and HTTP restores. 
 
 Full-note snapshots are simple but expensive. Notes may be 5 MiB, and the MVP keeps every committed version; monitor Atlas storage, synchronization bandwidth, and latency, and limit payload/rate rather than silently pruning history. See [operations](operations.md) before adding retention.
 
+History pages query only version metadata; reading full version content is reserved for the version detail endpoint. Invite redemption uses a conditional room write in the membership transaction so a concurrent code rotation cannot leave a stale invite valid.
+
 ## Presence
 
 Track a set of socket IDs for each room/user. Add only after an authorized join, and remove on leave, disconnect, logout, or expiry. Publish the entire deduplicated presence list with a monotonic per-process presence sequence; a fresh join resets the client's presence baseline. Presence is not stored in MongoDB and is rebuilt after a restart.

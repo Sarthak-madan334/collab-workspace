@@ -16,11 +16,15 @@ Reviewed on 2026-10-13 against the repository's HTTP and realtime contracts. Thi
 | Session-expiry event could be lost to an immediate transport close. | A client might remain on a reconnecting screen with an expired token. | Allow the expiry packet to flush briefly before disconnect and handle authentication failure on reconnect. |
 | Shutdown could close the database while an accepted socket handler was still starting. | An in-flight edit could fail after shutdown had reported drained work. | Reject new HTTP/socket work, close transports, then drain active socket handlers and the room queue before closing MongoDB. |
 | Frontend runtime dependencies used `latest` ranges. | A fresh install could resolve unreviewed versions instead of the tested set. | Pin the current dependency versions in the frontend manifest and lockfile. |
+| History and idempotency lookups fetched full note bodies unnecessarily. | A metadata-only history page could transfer hundreds of MiB from MongoDB after the 5 MiB note limit. | Project only required fields for history, operation-status, and duplicate-operation lookups. |
+| Invite redemption checked the code before writing membership. | A rotation on another server instance could commit between that check and membership insertion. | Redeem the code with a conditional room write in the membership transaction, so rotation and redemption conflict and retry in a defined order. |
+| Socket events authenticated before any in-flight work cap. | A single connected client could queue many database reads and hold many event payloads concurrently. | Cap pending events at eight per socket and 256 per process before authentication. |
+| A socket could disconnect while an asynchronous room join was pending. | Presence could retain a user whose disconnect handler had already run. | Recheck connection after joining and before adding presence. |
 
 ## Validation performed
 
-- Eleven unit and HTTP/socket tests pass, including unauthorized origin, nonmember room access, two-tab presence, socket caps, token revocation, transaction retry semantics, response cache headers, and byte-budget enforcement.
-- A local single-node MongoDB replica set ran the end-to-end HTTP/Socket.IO test: account creation, atomic initial room state, invite redemption and rotation, two-user edits, idempotent retry, conflicting operation reuse, stale-base ordering, history pagination, owner-only restore, 5 MiB note acceptance and oversized note rejection, idle session expiry, and logout disconnect. The test database was dropped afterward.
+- Twelve unit and HTTP/socket tests pass, including unauthorized origin, nonmember room access, two-tab presence, socket and in-flight event caps, disconnect during join, token revocation, transaction retry semantics, response cache headers, byte-budget enforcement, and metadata-only history reads.
+- A local single-node MongoDB replica set ran the end-to-end HTTP/Socket.IO test: account creation, atomic initial room state, invite redemption and rotation, a controlled cross-service rotation/redemption race, two-user edits, idempotent retry, conflicting operation reuse, stale-base ordering, history pagination after a 5 MiB edit, owner-only restore, oversized note rejection, idle session expiry, and logout disconnect. The test database was dropped afterward.
 - `npm audit` reports zero known advisories for the server and frontend lockfiles at review time. This does not prove the absence of vulnerabilities.
 - The frontend production build and `git diff --check` pass.
 

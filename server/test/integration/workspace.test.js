@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { ObjectId } from 'mongodb';
 import { io as createClient } from 'socket.io-client';
 import { connectDatabase } from '../../src/db.js';
 import { createAuthService } from '../../src/auth.js';
@@ -104,6 +105,31 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.notEqual(rotated.data.inviteCode, created.data.inviteCode);
   assert.equal((await request('/rooms/join', 'POST', charlie.token, { inviteCode: created.data.inviteCode })).status, 404);
   assert.equal((await request('/rooms/join', 'POST', charlie.token, { inviteCode: rotated.data.inviteCode })).status, 200);
+  assert.equal((await db.collection('rooms').findOne({ _id: new ObjectId(roomId) })).inviteRedemptions, 3);
+  const eve = (await request('/auth/register', 'POST', null, { name: 'Eve', email: 'eve@example.test', password: 'very-secure-passphrase' })).data;
+  let reachedWrite;
+  const atWrite = new Promise((resolve) => { reachedWrite = resolve; });
+  let releaseWrite;
+  const writeGate = new Promise((resolve) => { releaseWrite = resolve; });
+  const roomCollection = db.collection('rooms');
+  const gatedRoomCollection = new Proxy(roomCollection, {
+    get(target, property) {
+      if (property === 'findOneAndUpdate') return async (...args) => {
+        reachedWrite();
+        await writeGate;
+        return target.findOneAndUpdate(...args);
+      };
+      const value = target[property];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  const competingRooms = createRoomService({ collection: (name) => name === 'rooms' ? gatedRoomCollection : db.collection(name) }, client, auth, new RoomQueue());
+  const staleJoin = competingRooms.join(eve.token, { inviteCode: rotated.data.inviteCode });
+  await atWrite;
+  assert.equal((await request(`/rooms/${roomId}/invite/rotate`, 'POST', alice.token)).status, 200);
+  releaseWrite();
+  await assert.rejects(staleJoin, { code: 'INVALID_INVITE' });
+  assert.equal(await db.collection('memberships').countDocuments({ roomId: new ObjectId(roomId), userId: new ObjectId(eve.user.id) }), 0);
   assert.equal((await request(`/rooms/${roomId}/versions/1/restore`, 'POST', bob.token, { operationId: randomUUID(), expectedRevision: 4 })).status, 403);
   const restored = await request(`/rooms/${roomId}/versions/1/restore`, 'POST', alice.token, { operationId: randomUUID(), expectedRevision: 4 });
   assert.equal(restored.data.note.revision, 5);
@@ -119,6 +145,9 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   const maxEdit = await third.emitWithAck('note:update', { roomId, operationId: randomUUID(), baseRevision: 5, content: maxContent });
   assert.equal(maxEdit.data.note.revision, 6);
   assert.equal(maxEdit.data.note.content.length, maxContent.length);
+  const afterLargeHistory = await request(`/rooms/${roomId}/versions?limit=1`, 'GET', alice.token);
+  assert.equal(afterLargeHistory.data.items[0].revision, 6);
+  assert.equal(JSON.stringify(afterLargeHistory.data).includes(maxContent), false);
   const oversized = await third.emitWithAck('note:update', { roomId, operationId: randomUUID(), baseRevision: 6, content: 'é'.repeat(5 * 1024 * 1024 / 2 + 1) });
   assert.equal(oversized.error.code, 'PAYLOAD_TOO_LARGE');
   assert.equal((await request(`/rooms/${roomId}/note`, 'GET', alice.token)).data.note.revision, 6);

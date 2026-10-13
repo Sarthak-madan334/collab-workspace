@@ -8,7 +8,7 @@ Use MongoDB Atlas with separate collections. API IDs are strings; validate and c
 | --- | --- |
 | `users` | `_id`, `name`, `emailNormalized`, `passwordHash`, `passwordSalt`, `passwordParams`, `createdAt`, `updatedAt` |
 | `sessions` | `_id`, `userId`, `tokenHash`, `createdAt`, `expiresAt`, `revokedAt` nullable |
-| `rooms` | `_id`, `name`, `ownerId`, `inviteCode`, `createdAt`, `updatedAt` |
+| `rooms` | `_id`, `name`, `ownerId`, `inviteCode`, `inviteRedemptions`, `createdAt`, `updatedAt` |
 | `memberships` | `_id`, `roomId`, `userId`, `joinedAt` |
 | `notes` | `_id`, `roomId`, `content`, `revision`, `updatedBy`, `updatedAt` |
 | `versions` | `_id`, `roomId`, `revision`, `content`, `authorId`, `operationId`, `requestHash`, `baseRevision`, `kind`, `restoredFromRevision` nullable, `createdAt` |
@@ -16,6 +16,8 @@ Use MongoDB Atlas with separate collections. API IDs are strings; validate and c
 `kind` is `initial`, `edit`, or `restore`. Revision 0 is the empty initial version with a server-generated operation ID. `requestHash` hashes a canonical representation of the operation's kind and submitted fields; it detects reuse of an operation ID with different content. For restore, include source revision and expected current revision in that hash.
 
 Invite codes are random 128-bit values encoded as URL-safe strings. The MVP stores them as retrievable bearer invitations so an owner can display/share the current code. Treat database access and log redaction accordingly; only owner endpoints return them. They are distinct from room IDs and session tokens.
+
+Invite redemption increments `inviteRedemptions` in the same transaction as membership creation. Rotation also writes the room document, so a redemption that races rotation must retry against the current code. Existing rooms gain the counter on their next redemption.
 
 ## Indexes
 
