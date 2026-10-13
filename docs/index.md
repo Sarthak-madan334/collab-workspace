@@ -1,6 +1,6 @@
 # Documentation index
 
-All guides describe the planned implementation unless explicitly stated otherwise. The current repository is documentation-only.
+The repository contains the React frontend and Node.js backend. The requirements and release checklists also describe planned acceptance work that needs a configured Atlas environment and deployment.
 
 | Guide | Purpose |
 | --- | --- |
@@ -14,6 +14,7 @@ All guides describe the planned implementation unless explicitly stated otherwis
 | [API contract](api-contract.md) | HTTP routes, payloads, and errors |
 | [Realtime protocol](realtime-protocol.md) | Events, ordering, acknowledgments, and recovery |
 | [Security](security.md) | Sessions, credentials, permissions, and validation |
+| [Backend security review](backend-security-review.md) | Findings, fixes, test evidence, and release checks |
 | [Local development](local-development.md) | Repository layout, commands, and environment variables |
 | [Implementation plan](implementation-plan.md) | Milestones and completion gates |
 | [Testing and validation](testing-and-validation.md) | Functional, concurrency, security, and deployment checks |
@@ -22,4 +23,4 @@ All guides describe the planned implementation unless explicitly stated otherwis
 | [Demo and pitch](demo-and-pitch.md) | Core demonstration and evaluation evidence |
 | [Source and decisions](source-and-decisions.md) | Traceability, assumptions, risks, and open decisions |
 
-Start implementation with requirements and the stack. Agree on the data, HTTP, and realtime contracts before connecting the editor. Use the testing guide as the release checklist. Update affected guides in the same change as any implementation decision.
+Use the testing guide as the release checklist. Update affected guides in the same change as any implementation decision.

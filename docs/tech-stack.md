@@ -14,7 +14,7 @@ Hosting was added explicitly by the user: **Vercel for the frontend and Render f
 
 ## Supporting implementation choices
 
-These are proposed additions within the selected stack, not technologies named by the proposal. Pin compatible stable versions and commit package lockfiles when scaffolding; no dependency versions have been installed or tested yet.
+These are supporting choices within the selected stack, not technologies named by the proposal. The frontend and backend dependencies are pinned in their package manifests and lockfiles.
 
 | Choice | Purpose |
 | --- | --- |
@@ -29,7 +29,7 @@ These are proposed additions within the selected stack, not technologies named b
 | Node.js test runner | Server unit/integration tests |
 | Playwright | Multi-session browser and deployment tests |
 
-Use one supported Node.js LTS major compatible with the chosen tooling, pinned consistently in local development, CI, and Render. Record the exact major and package versions after scaffolding rather than assuming an unverified version here.
+Use Node.js 22.18 or newer, as specified by the backend package. Keep local development, CI, and Render on a compatible supported major.
 
 ## Deliberate boundaries
 

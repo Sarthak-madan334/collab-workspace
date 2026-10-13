@@ -1,6 +1,6 @@
 # Testing and validation
 
-These are planned test cases, not results. Use isolated Atlas test data, separate browser contexts, and reproducible network conditions. Proposed tooling is listed in [tech stack](tech-stack.md).
+The server includes unit/HTTP pipeline tests in `server/test/*.test.js` and an optional full integration test in `server/test/integration/`. The matrix below remains the release acceptance plan. Use isolated Atlas test data, separate browser contexts, and reproducible network conditions.
 
 ## Core acceptance matrix
 
@@ -44,7 +44,7 @@ Test keyboard-only navigation, focus return, screen-reader status announcements,
 
 ## Performance and release checks
 
-Measure the proposed 20-user envelope and p95 synchronization latency on a warm Render instance; report network conditions, sample count, note sizes, and measurement boundaries. Record cold-start time separately. Test repeated 100 KiB notes to understand full-snapshot memory/storage costs without exhausting a shared database.
+Measure the proposed 20-user envelope and p95 synchronization latency on a warm Render instance; report network conditions, sample count, note sizes, and measurement boundaries. Record cold-start time separately. Test repeated notes up to 5 MiB to understand full-snapshot memory, bandwidth, and storage costs without exhausting a shared database. A 5 MiB note saved as 100 full versions consumes roughly 500 MiB of content before BSON and index overhead.
 
 After deployment verify HTTPS/WSS, allowed origins, Atlas access, health checks, direct room URLs, two-browser collaboration, refresh persistence, history restore, and recovery after a Render redeploy. Never substitute local test success for deployed acceptance.
 
@@ -61,4 +61,4 @@ Known limitations:
 Release decision:
 ```
 
-No application tests can run until the code and manifests exist. Documentation verification checks file placement, local links, stack consistency, and contract agreement separately.
+Run `npm test` from `server/` for local checks. Set `MONGODB_TEST_URI` and run `npm run test:integration` to verify transactions and a two-user WebSocket flow against a throwaway database whose name begins `synkro_test_`. The integration runner skips explicitly when no URI is present; a skip is not a passing database test.

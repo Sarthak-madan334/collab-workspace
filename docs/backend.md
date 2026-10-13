@@ -4,7 +4,7 @@
 
 Use JavaScript on Node.js, Express for HTTP, Socket.IO for realtime, and the official MongoDB driver. Host one persistent Render web-service instance. Attach HTTP and Socket.IO to the same server, listen on `0.0.0.0`, and use `process.env.PORT` with local fallback `4000`.
 
-Planned `server/src/` modules: `app.js`, `server.js`, `config/`, `routes/`, `middleware/`, `services/`, `repositories/`, `sockets/`, and `validation/`. Socket handlers and route controllers call shared services rather than duplicating permissions or persistence code.
+The implementation lives in `server/src/`: `app.js` owns HTTP routes, `socket.js` owns realtime handlers, `auth.js`, `rooms.js`, and `notes.js` implement shared services, and `db.js`, `queue.js`, `presence.js`, `validation.js`, and `config.js` provide infrastructure. HTTP and socket handlers call the same services rather than duplicating permissions or persistence code.
 
 ## Services
 
@@ -28,9 +28,9 @@ Require authentication for all room resources and socket events. Revalidate sess
 
 Each edit increments the current revision and stores a complete immutable version. Use a MongoDB transaction so neither current content nor history can commit alone. Enforce unique revision and operation indexes, retry transient transaction conflicts with bounded backoff, and return a retryable error when the budget is exhausted.
 
-Use one bounded queue per active room shared by socket edits and HTTP restores. Release idle queues; reject overload with `RATE_LIMITED` or `SERVICE_UNAVAILABLE` rather than allowing unbounded memory growth. Driver transaction retries must not emit events inside the transaction callback. Broadcast only after a successful commit, including when an operation lookup discovers a committed retry.
+Use one bounded queue per active room shared by socket edits and HTTP restores. Release idle queues; reject overload with `RATE_LIMITED` or `SERVICE_UNAVAILABLE` rather than allowing unbounded memory growth. Driver transaction retries must not emit events inside the transaction callback. Broadcast a newly committed operation after successful commit. A retry returns its original applied revision and the latest note; periodic sync recovers any broadcast lost between commit and acknowledgment.
 
-Full-note snapshots are simple but expensive. The MVP keeps every committed version; monitor Atlas storage and limit payload/rate rather than silently pruning history. See [operations](operations.md) before adding retention.
+Full-note snapshots are simple but expensive. Notes may be 5 MiB, and the MVP keeps every committed version; monitor Atlas storage, synchronization bandwidth, and latency, and limit payload/rate rather than silently pruning history. See [operations](operations.md) before adding retention.
 
 ## Presence
 

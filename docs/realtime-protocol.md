@@ -18,6 +18,8 @@ All client events use acknowledgments: success `{ok:true,data:...}` or failure `
 
 `note:status` only discloses an operation owned by the authenticated user and always checks room membership. `note:update` also requires the socket to have joined the specified room. The browser creates a fresh UUID operation ID for each submitted snapshot, retaining it for retries of that exact payload.
 
+`note:update` accepts up to 5 MiB (5,242,880 bytes) of UTF-8 note content. The browser allows up to 60 seconds for the server acknowledgment of a large save. A per-user/room budget of 60 MiB of submitted note text per minute limits repeated full-snapshot writes.
+
 ## Server events
 
 | Event | Payload | Meaning |

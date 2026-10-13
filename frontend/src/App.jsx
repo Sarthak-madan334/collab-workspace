@@ -589,7 +589,13 @@ function RoomPage() {
     };
     const onConnect = () => { setConnection('connecting'); joinRoom(); };
     const onDisconnect = () => { joined = false; setConnection('reconnecting'); setSaveState((state) => state === 'saving' || state === 'saved' ? 'paused' : state); };
-    const onConnectError = () => { setConnection('reconnecting'); };
+    const onConnectError = (error) => {
+      if (error?.message === 'UNAUTHENTICATED') {
+        setConnection('error'); setSession(null); navigate('/login', { replace: true });
+        return;
+      }
+      setConnection('reconnecting');
+    };
     const onUpdated = (event) => { if (event.roomId === roomId) receiveCanonical(event.note, event.operationId === inFlightRef.current?.operationId); };
     const onPresence = (event) => {
       if (event.roomId !== roomId || Number(event.presenceSequence) <= presenceSequenceRef.current) return;
@@ -619,7 +625,7 @@ function RoomPage() {
     inFlightRef.current = { content, operationId, baseRevision };
     setSaveState('saving');
     try {
-      const result = await socketAck(socket, 'note:update', { roomId, operationId, baseRevision, content });
+      const result = await socketAck(socket, 'note:update', { roomId, operationId, baseRevision, content }, 60_000);
       const canonical = result.note || result;
       inFlightRef.current = null;
       if (Number(canonical.revision) > Number(noteRef.current?.revision || 0)) receiveCanonical(canonical, true);
@@ -724,7 +730,7 @@ function RoomPage() {
   const copyInvite = async () => { try { await navigator.clipboard.writeText(inviteCode); setToast('Invite code copied.'); } catch { setToast('Copy is unavailable. Select and copy the code.'); } };
   const handleEdit = (event) => {
     const nextValue = event.target.value;
-    if (new TextEncoder().encode(nextValue).length > 102400) { setToast('Notes can be up to 100 KB.'); return; }
+    if (new TextEncoder().encode(nextValue).length > 5 * 1024 * 1024) { setToast('Notes can be up to 5 MiB.'); return; }
     setDraft(nextValue);
   };
   const handleConflict = (keepLocal) => {

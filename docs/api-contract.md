@@ -1,6 +1,6 @@
 # HTTP API contract
 
-Planned base URL: `https://<backend>.onrender.com/api/v1`. JSON requests and responses. These routes are specifications, not existing endpoints.
+Base URL: `https://<backend>.onrender.com/api/v1` in production and `http://localhost:4000/api/v1` locally. The routes below are implemented in `server/src/app.js` and backed by MongoDB Atlas.
 
 Success envelope: `{ "data": ... }`. Error envelope: `{ "error": { "code": "FORBIDDEN", "message": "Access denied", "requestId": "..." } }`. Protected routes use `Authorization: Bearer <token>`. API timestamps are ISO 8601 UTC strings.
 

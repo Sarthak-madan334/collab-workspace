@@ -2,7 +2,7 @@
 
 ## Session design
 
-Proposed core design: opaque random bearer sessions, stored server-side in Atlas. Generate at least 32 random bytes with Node.js `crypto`, return the token once, and store only its SHA-256 hash. Session lifetime defaults to 8 hours. Check expiry/revocation on every protected request and event; TTL indexes only clean up records.
+The implemented core uses opaque random bearer sessions stored server-side in Atlas. It generates 32 random bytes with Node.js `crypto`, returns the token once, and stores only its SHA-256 hash. Session lifetime defaults to 8 hours. Expiry/revocation is checked on every protected request and event; TTL indexes only clean up records.
 
 Store tokens in browser memory, not localStorage, URLs, or logs. Page reload requires sign-in; persistent login/refresh tokens are deferred. This avoids depending on cross-site cookies between Vercel and Render. If persistent login is later introduced, document its cookie, CSRF, refresh, and browser compatibility design before changing this contract.
 
@@ -24,7 +24,7 @@ Invite possession allows an authenticated user to join. Generate unpredictable c
 
 Allow only exact approved frontend origins on HTTP CORS and the Socket.IO transport/handshake. Cover WebSocket upgrades as well as polling; CORS alone is not authorization. Permit the `Authorization` and `Content-Type` headers and the required methods. No cookie credentials are needed under this bearer design. Require HTTPS/WSS in production.
 
-Initial application limits to validate in testing: 10 authentication attempts per 15 minutes per IP, 10 invite attempts per minute per user, and 5 edit events per second per user/room. Bound concurrent sockets, per-room queue depth, and JSON/event payload size (256 KiB transport ceiling, 100 KiB content limit). Return explicit overload errors. Configure proxy-aware client IP handling only for the actual deployment topology; do not blindly trust arbitrary forwarded headers.
+Application limits are 10 authentication attempts per 15 minutes per IP, 10 invite attempts per minute per user, 5 edit events per second and 60 MiB of submitted note text per minute per user/room, 120 authenticated HTTP requests per minute per user, 30 socket handshakes per minute per client IP, 8 concurrent sockets per user, 20 joined rooms per socket, and 30 join/sync/status events per minute for their relevant user or room scope. The room queue is capped at 64 pending actions per room. HTTP JSON bodies are capped at 256 KiB; Socket.IO packets are capped at 32 MiB to allow JSON escaping of a 5 MiB UTF-8 note. The application still validates the note itself to 5 MiB. The limiter stores at most 10,000 active keys. Overload returns explicit errors. Configure proxy-aware client IP handling only for the actual deployment topology; do not blindly trust arbitrary forwarded headers.
 
 ## Secrets and data
 

@@ -30,7 +30,7 @@ The owner is also a member. Member removal, ownership transfer, room deletion, a
 ## Proposed limits and quality targets
 
 - Up to 20 online users per room for the initial measured test; this is a test envelope, not proven capacity.
-- Note content: at most 100 KiB of UTF-8 text; room names: 1–80 characters; display names: 1–50 characters.
+- Note content: at most 5 MiB (5,242,880 bytes) of UTF-8 text; room names: 1–80 characters; display names: 1–50 characters.
 - Editor debounce: 500 ms; at most one edit request in flight per client. Retain later typing as a separate pending draft.
 - On a warm service, target p95 under 1 second from server receipt to remote display for 20 users on the documented test network. Measure typing debounce separately.
 - Target presence removal within 45 seconds after abrupt disconnection, subject to configured heartbeat timing and network conditions.

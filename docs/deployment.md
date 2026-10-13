@@ -1,6 +1,6 @@
 # Deployment: Vercel, Render, and MongoDB Atlas
 
-This is the planned deployment runbook. No service has been created or deployed. Settings assume the `frontend/` and `server/` layout in [local development](local-development.md).
+This is the deployment runbook for the implemented application. No service has been created or deployed. Settings assume the `frontend/` and `server/` layout in [local development](local-development.md).
 
 ## Hosting contract
 
@@ -22,9 +22,9 @@ Initialize indexes and test a note/version transaction. Never store durable note
 
 Connect the intended Git repository and select the agreed release branch. Use a Node web service, root `server`, `npm ci`, and `npm start`; no transpilation build is required by the proposed JavaScript server. Pin the same Node major as local development. Set `NODE_ENV=production`, `MONGODB_URI`, `MONGODB_DB_NAME=synkro_prod`, `SESSION_TTL_HOURS=8`, `LOG_LEVEL=info`, and the exact frontend origin in `CLIENT_ORIGINS`.
 
-The server must bind to `0.0.0.0` and Render's supplied `PORT`. HTTP and Socket.IO share this port. Configure `/health/ready` and retain one instance. See [Render web-service configuration](https://render.com/docs/web-services).
+The server must bind to `0.0.0.0` and Render's supplied `PORT`. HTTP and Socket.IO share this port. Set `TRUST_PROXY_HOPS=1` for correct IP-based rate limiting behind Render's proxy. Configure `/health/ready` and retain one instance. See [Render web-service configuration](https://render.com/docs/web-services).
 
-If the frontend domain is not known yet, deploy the backend with an empty browser-origin allowlist, then set the exact assigned Vercel origin before testing. Do not temporarily permit every origin.
+The backend requires at least one exact HTTPS browser origin at startup. Use the intended production domain, then update `CLIENT_ORIGINS` to the assigned Vercel origin before browser testing. Do not temporarily permit every origin.
 
 Render supports WebSocket connections, but replacement instances close existing connections. The application must reconnect and resync after deploys; see [Render WebSockets](https://render.com/docs/websocket). A free Render web service can spin down after inactivity and take time to restart. Treat cold starts as a separate UX/test condition and review current plan limits before the demo; see [Render free services](https://render.com/docs/free).
 
@@ -64,7 +64,7 @@ Preview deployments need explicit origin approval and preferably a separate stag
 - Restore creates a new revision and updates both browsers.
 - Nonmembers, invalid origins, expired sessions, and invalid payloads are rejected.
 - Logs and frontend assets contain no secrets or note bodies.
-- Record deployment URLs, commit, plan/region, and acceptance results in the README/release record.
+- Record deployment URLs, commit, plan/region, and acceptance results in a release record.
 
 ## Rollback
 
