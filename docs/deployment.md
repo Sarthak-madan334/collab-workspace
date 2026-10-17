@@ -5,10 +5,11 @@ This is the deployment runbook for the implemented application. No service has b
 ## Provisioning order
 
 1. Create the Vercel project and note its stable production URL (or configure the final custom domain). Its first build may wait until the backend URL is known.
-2. Create the Atlas cluster, production database user, and network access for Render's outbound ranges.
-3. Create the Render service with the exact Vercel origin in `CLIENT_ORIGINS`; note the Render URL.
-4. Add the Render URLs to the Vercel production environment and deploy or redeploy the frontend.
-5. Run the two-user release checks below before inviting users.
+2. Create the Atlas cluster and production database user.
+3. Create the Render service with the exact Vercel origin in `CLIENT_ORIGINS`; note its URL and outbound ranges.
+4. Allow those Render outbound ranges in Atlas, then deploy or redeploy Render and confirm readiness.
+5. Add the Render URLs to the Vercel production environment and deploy or redeploy the frontend.
+6. Run the two-user release checks below before inviting users.
 
 ## Hosting contract
 
