@@ -1,0 +1,198 @@
+/* Signed-in workspace only. The public site keeps its own visual language. */
+.app-shell {
+  --bg: #e9edf1;
+  --surface: rgba(250, 251, 252, .72);
+  --surface-strong: rgba(250, 251, 252, .92);
+  --line: rgba(67, 82, 97, .17);
+  --line-strong: rgba(67, 82, 97, .3);
+  --text: #26323e;
+  --muted: #536272;
+  --subtle: #647484;
+  --lime: #47627d;
+  --lime-dim: rgba(71, 98, 125, .1);
+  --danger: #a84848;
+  --glass-shadow: 9px 9px 24px rgba(123, 140, 155, .18), -9px -9px 24px rgba(255, 255, 255, .75), inset 0 1px 0 rgba(255, 255, 255, .9);
+  color: var(--text);
+  color-scheme: light;
+  background: var(--bg);
+}
+.app-shell ::selection { color: #fff; background: #47627d; }
+.app-shell :is(button, a, input, textarea):focus-visible,
+.app-shell .room-card:focus-visible { outline: 2px solid #345b80; outline-offset: 3px; }
+.app-shell .glass-panel { background: var(--surface); border-color: var(--line); box-shadow: var(--glass-shadow); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.app-shell :is(.status-dot, .member-dot, .aside-live i, .connection-dot) { background: #477d76; box-shadow: none; }
+.app-shell .eyebrow { color: var(--muted); font-size: 11px; }
+.app-shell .eyebrow-line { background: #8194a7; }
+.app-shell :is(.brand-name, .room-title-wrap h1, .section-heading h2, .drawer-header h2, .modal-card h2) { color: var(--text); }
+.app-shell .brand-mark { border-color: #8195a9; background: rgba(255,255,255,.55); }
+.app-shell .brand-mark::before, .app-shell .brand-mark::after { background: #47627d; }
+.app-shell .brand-mark span { background: #e9edf1; }
+.app-shell .brand-period, .app-shell .footer-star { color: #47627d; }
+.app-shell .avatar { color: #334a60; border-color: rgba(60,78,96,.14); background: #dce5ec; }
+.app-shell .avatar-color-1, .app-shell .avatar-violet { color: #514c66; background: #e7e3ed; }
+.app-shell .avatar-color-3 { color: #426365; background: #deebea; }
+.app-shell .avatar-profile, .app-shell .avatar-me { color: #324d64; background: #d8e4ed; }
+.app-shell .button { color: #344454; border-color: rgba(76,94,110,.22); background: rgba(255,255,255,.54); box-shadow: 4px 4px 12px rgba(124,140,155,.17), -4px -4px 12px rgba(255,255,255,.8), inset 0 1px 0 rgba(255,255,255,.9); }
+.app-shell .button:hover:not(:disabled) { color: #24384b; border-color: rgba(61,84,107,.42); background: rgba(255,255,255,.83); }
+.app-shell .button-primary { color: #fff; border-color: #394f65; background: #3e566e; box-shadow: 5px 6px 16px rgba(73,92,111,.22), inset 0 1px 0 rgba(255,255,255,.2); }
+.app-shell .button-primary:hover:not(:disabled) { color: #fff; border-color: #283e53; background: #304960; box-shadow: 5px 7px 18px rgba(73,92,111,.25); }
+.app-shell .icon-button { color: #536576; }
+.app-shell .icon-button:hover:not(:disabled) { color: #263a4d; border-color: var(--line); background: rgba(255,255,255,.66); }
+.app-shell .topbar { border: 1px solid rgba(255,255,255,.75); background: rgba(250,251,252,.76); box-shadow: 7px 8px 24px rgba(120,136,151,.17), -5px -5px 20px rgba(255,255,255,.67), inset 0 1px 0 #fff; }
+.app-shell .nav-link { color: #526171; }
+.app-shell .nav-link:hover, .app-shell .nav-link.active { color: #263b50; }
+.app-shell .nav-link.active::after { background: #54708a; }
+.app-shell .nav-caption, .app-shell .help-button { color: #5c6977; }
+.app-shell .help-button:hover { color: #2c4257; }
+.app-shell .profile-button { color: #344859; }
+.app-shell .profile-button:hover { background: rgba(255,255,255,.56); }
+.app-shell .profile-button > svg { color: #65778a; }
+.app-shell .profile-menu { background: rgba(249,251,252,.94); }
+.app-shell .profile-menu-user strong { color: var(--text); }
+.app-shell .profile-menu > button { color: #3b4b5b; font-size: 13px; }
+.app-shell .profile-menu > button:hover { color: #25394d; background: rgba(80,105,127,.09); }
+.app-shell .app-footer { color: #667582; border-top-color: rgba(68,85,101,.15); font-size: 10px; }
+.app-shell .app-footer b { color: #7d8a96; }
+
+/* Dashboard: typography and room tiles carry the hierarchy, not decoration. */
+.app-shell .dashboard-hero { min-height: 275px; padding-top: 39px; }
+.app-shell .hero-copy h1 { color: #26323e; }
+.app-shell .hero-copy h1 span { color: #65788b; }
+.app-shell .hero-copy > p { color: #4c5d6c; font-size: 15px; line-height: 1.65; }
+.app-shell .hero-side, .app-shell .room-card, .app-shell .empty-state, .app-shell .bottom-note {
+  border: 1px solid rgba(255,255,255,.78);
+  background: rgba(250,251,252,.69);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.app-shell :is(.hero-side-icon, .room-glyph, .create-card-icon, .bottom-note-icon, .empty-art, .room-title-icon, .editor-live-icon, .aside-icon, .conflict-icon, .history-kind, .manage-icon) {
+  color: #486783;
+  border-color: rgba(71,98,125,.18);
+  background: rgba(226,234,241,.67);
+  box-shadow: inset 2px 2px 5px rgba(132,149,165,.13), inset -2px -2px 5px rgba(255,255,255,.9);
+}
+.app-shell .hero-side-label, .app-shell .section-kicker, .app-shell .room-label { color: #657484; font-size: 11px; }
+.app-shell .hero-side p { color: #364656; }
+.app-shell :is(.hero-side-mark, .bottom-note-deco, .tip-decoration, .empty-art-ring) { display: none; }
+.app-shell .count-pill { color: #4b6074; font-size: 11px; }
+.app-shell .section-actions .button:not(.button-primary), .app-shell .guide-replay-button {
+  color: #34495c; border-color: rgba(76,94,110,.22); background: rgba(255,255,255,.58);
+  box-shadow: 4px 4px 12px rgba(124,140,155,.17), -4px -4px 12px rgba(255,255,255,.8), inset 0 1px 0 #fff;
+}
+.app-shell .section-actions .button:not(.button-primary):hover, .app-shell .guide-replay-button:hover { color: #263d52; border-color: rgba(61,84,107,.4); background: rgba(255,255,255,.86); box-shadow: 5px 5px 14px rgba(124,140,155,.19); }
+.app-shell .section-actions .button-primary, .app-shell .section-actions .button-primary:hover:not(:disabled) { color: #fff; border-color: #394f65; background: #3e566e; box-shadow: 5px 6px 16px rgba(73,92,111,.22), inset 0 1px 0 rgba(255,255,255,.2); }
+.app-shell .section-actions .button-primary:hover:not(:disabled) { background: #304960; }
+.app-shell .guide-replay-button { font-size: 12px; }
+.app-shell .guide-replay-button svg, .app-shell .guide-replay-button:hover svg { color: #59718a; }
+.app-shell .section-actions .button.is-guide-target { border-color: #5b7893; box-shadow: 0 0 0 3px rgba(71,98,125,.17); animation: none; }
+.app-shell .dashboard-guide-connector path { stroke: #59748d; filter: none; }
+.app-shell .dashboard-guide-connector circle { fill: #59748d; stroke: rgba(71,98,125,.2); filter: none; }
+.app-shell .dashboard-onboarding-tooltip { color: #26323e; border-color: rgba(71,98,125,.2); background: rgba(250,251,252,.95); box-shadow: 9px 12px 32px rgba(90,108,124,.23), inset 0 1px 0 #fff; }
+.app-shell .dashboard-onboarding-tooltip strong { color: #26323e; }
+.app-shell .dashboard-onboarding-tooltip p { color: #4e5f6f; font-size: 12px; }
+.app-shell .guide-indicator { background: #53718b; box-shadow: none; }
+.app-shell .guide-close { color: #536474; }
+.app-shell .guide-close:hover { color: #263b50; border-color: var(--line); background: rgba(80,105,127,.09); }
+.app-shell .room-card::before { display: none; }
+.app-shell .room-card:hover, .app-shell .room-card:focus-visible { border-color: rgba(104,126,148,.45); background: rgba(255,255,255,.88); box-shadow: 9px 11px 26px rgba(116,134,150,.2), -6px -6px 20px rgba(255,255,255,.7); }
+.app-shell .room-card-body h3 { color: #26323e; font-size: 18px; }
+.app-shell .room-card-body p, .app-shell .room-meta, .app-shell .room-label { color: #596a79; font-size: 12px; }
+.app-shell .room-card-footer { border-top-color: rgba(71,87,103,.14); }
+.app-shell .room-open { color: #3b5a74; font-size: 12px; }
+.app-shell .room-open svg, .app-shell .room-create-card .create-arrow { color: #54718b; }
+.app-shell .room-create-card { background: rgba(242,246,249,.58); border: 1px dashed rgba(76,96,115,.38); box-shadow: inset 3px 3px 9px rgba(130,146,161,.12), inset -3px -3px 9px rgba(255,255,255,.75); }
+.app-shell .room-create-card:hover, .app-shell .room-create-card:focus-visible { border-color: #5d7892; background: rgba(250,252,253,.83); }
+.app-shell .room-create-card strong { font-size: 14px; }
+.app-shell .room-create-card small { color: #5c6d7b; font-size: 12px; }
+.app-shell .room-create-card:hover .create-arrow, .app-shell .room-create-card:focus-visible .create-arrow { color: #304e68; }
+.app-shell .skeleton i { background: #d2dce4; }
+.app-shell .empty-state > p { color: #536372; font-size: 14px; }
+.app-shell .empty-actions .button { font-size: 13px; }
+.app-shell .text-button { color: #3d5b75; font-size: 12px; }
+.app-shell .text-button:hover { color: #243f58; }
+.app-shell .bottom-note strong { color: #2b3d4e; font-size: 13px; }
+.app-shell .bottom-note p, .app-shell .dashboard-caption { color: #5c6d7b; font-size: 11px; }
+.app-shell .inline-alert { color: #873f3f; background: rgba(255,245,244,.75); border-color: rgba(168,72,72,.24); }
+
+/* The editor is a quiet paper surface with clear surrounding tools. */
+.app-shell .room-breadcrumb, .app-shell .back-link { color: #536678; font-size: 12px; }
+.app-shell .back-link:hover { color: #294a67; }
+.app-shell .crumb-divider { color: #788999; }
+.app-shell .connection-badge { color: #4c5f70; background: rgba(255,255,255,.55); font-size: 11px; }
+.app-shell .tone-danger .connection-dot { background: #a84848; box-shadow: none; }
+.app-shell .retry-link { color: #315b7d; font-size: 11px; }
+.app-shell .avatar-presence, .app-shell .avatar-overflow { border-color: #eff3f6; }
+.app-shell .avatar-overflow { color: #43586b; background: #d9e3eb; }
+.app-shell .toolbar-button { color: #445b70; font-size: 12px; }
+.app-shell .toolbar-button:hover { color: #263e53; background: rgba(255,255,255,.7); }
+.app-shell .conflict-banner { color: #344556; border-color: rgba(71,98,125,.2); background: rgba(248,251,252,.8); }
+.app-shell .conflict-copy strong { font-size: 12px; }
+.app-shell .conflict-copy p { color: #536575; font-size: 11px; }
+.app-shell .editor-main, .app-shell .aside-card, .app-shell .manage-invite { border: 1px solid rgba(255,255,255,.78); background: rgba(250,251,252,.73); box-shadow: var(--glass-shadow); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.app-shell .editor-topline, .app-shell .editor-bottom { border-color: rgba(70,88,106,.14); }
+.app-shell .editor-context, .app-shell .editor-version, .app-shell .aside-card-head { color: #536677; font-size: 10px; }
+.app-shell .note-editor { color: #293745; font-size: 15px; line-height: 1.8; }
+.app-shell .note-editor::placeholder { color: #687989; }
+.app-shell .note-editor:focus-visible { outline: 2px solid #52718b; outline-offset: -5px; border-radius: 8px; }
+.app-shell .editor-author, .app-shell .editor-help { color: #5c6d7c; font-size: 10px; }
+.app-shell .editor-author strong, .app-shell .member-name { color: #2e4254; }
+.app-shell .aside-live, .app-shell .aside-empty, .app-shell .aside-foot, .app-shell .room-tip p, .app-shell .manage-invite small, .app-shell .room-aside-note { color: #566879; font-size: 11px; }
+.app-shell .member-name { font-size: 12px; }
+.app-shell .member-name small { color: #4b667c; border-color: rgba(71,98,125,.2); background: rgba(227,235,242,.65); font-size: 9px; }
+.app-shell .aside-foot { border-top-color: rgba(70,88,106,.14); }
+.app-shell .member-spark, .app-shell .room-aside-note svg { color: #53718a; }
+.app-shell .manage-invite:hover { background: rgba(255,255,255,.9); }
+.app-shell .manage-invite strong { color: #2b4052; font-size: 12px; }
+.app-shell .manage-invite > svg { color: #536e85; }
+.app-shell .room-loading { color: #516475; }
+.app-shell .room-loading .spinner, .app-shell .history-loading .spinner { border-color: rgba(71,98,125,.2); border-top-color: #47627d; }
+
+/* Dialogs, history, and transient feedback use the same surfaces. */
+.app-shell :is(.drawer-scrim, .modal-scrim) { background: rgba(34,49,63,.34); }
+.app-shell :is(.history-drawer, .modal-card) { color: var(--text); border: 1px solid rgba(255,255,255,.78); background: rgba(249,251,252,.94); box-shadow: 15px 20px 58px rgba(45,62,79,.27), inset 0 1px 0 #fff; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.app-shell .drawer-header p, .app-shell .modal-card > p { color: #536474; font-size: 13px; }
+.app-shell .history-item { color: #536777; border-bottom-color: rgba(70,88,106,.12); }
+.app-shell .history-item:hover { color: #274259; background: rgba(225,234,241,.55); }
+.app-shell .history-item-main strong { color: #263c50; font-size: 13px; }
+.app-shell .history-item-main small, .app-shell .preview-meta { color: #5d6f7f; font-size: 11px; }
+.app-shell .current-tag, .app-shell .preview-rev { color: #42627c !important; border-color: rgba(71,98,125,.23); }
+.app-shell .history-empty, .app-shell .history-loading { color: #5b6d7d; }
+.app-shell .history-empty strong { color: #33495c; }
+.app-shell .history-empty svg { color: #53718a; }
+.app-shell .preview-content, .app-shell .invite-code-box, .app-shell .input-wrap { color: #2b4052; border: 1px solid rgba(86,105,123,.28); background: rgba(240,245,248,.72); box-shadow: inset 3px 3px 8px rgba(127,145,161,.13), inset -3px -3px 8px rgba(255,255,255,.88); }
+.app-shell .preview-content em { color: #627384; }
+.app-shell .field-label { color: #3c5062; font-size: 13px; }
+.app-shell .input-wrap:focus-within { border-color: #5b7892; background: rgba(247,250,252,.9); }
+.app-shell .input-wrap input { color: #263746; font-size: 14px; }
+.app-shell .input-wrap input::placeholder { color: #677888; }
+.app-shell .modal-actions .button { min-height: 42px; font-size: 13px; }
+.app-shell .invite-code-box span { color: #344d62; font-size: 12px; }
+.app-shell .invite-note { color: #536575; font-size: 11px; }
+.app-shell .invite-note svg { color: #53718a; }
+.app-shell .toast { color: #2d4253; border-color: rgba(71,98,125,.2); background: rgba(250,252,253,.95); box-shadow: 6px 8px 22px rgba(77,97,116,.2); font-size: 13px; }
+.app-shell .toast > svg, .app-shell .toast-close { color: #47627d; }
+.app-shell .not-found p { color: #536575; font-size: 14px; }
+
+@media (max-width: 760px) {
+  .app-shell .main-nav.nav-open { border-color: rgba(71,98,125,.22); background: rgba(249,251,252,.95); box-shadow: var(--glass-shadow); }
+  .app-shell .dashboard-hero { min-height: auto; }
+  .app-shell .section-heading { align-items: flex-start; flex-direction: column; }
+  .app-shell .section-actions { width: 100%; justify-content: flex-start; }
+  .app-shell .section-actions .button { min-width: 136px; white-space: nowrap; }
+}
+@media (max-width: 520px) {
+  .app-shell .hero-copy h1 { font-size: clamp(39px, 11vw, 49px); }
+  .app-shell .hero-copy > p { font-size: 14px; }
+  .app-shell .dashboard-caption { display: none; }
+  .app-shell .section-actions .button { flex: 1; min-width: 0; padding-inline: 10px; font-size: 12px; }
+  .app-shell .note-editor { min-height: 340px; padding: 21px 18px; font-size: 14px; }
+  .app-shell .app-footer { font-size: 9px; }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .app-shell :is(.glass-panel, .hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) { background: #f8fafb; }
+}
+@media (forced-colors: active) {
+  .app-shell :is(.glass-panel, .button, .room-card, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) { border: 1px solid CanvasText; box-shadow: none; }
+  .app-shell :is(button, a, input, textarea):focus-visible { outline-color: Highlight; }
+}

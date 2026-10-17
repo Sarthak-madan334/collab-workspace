@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
@@ -102,13 +102,11 @@ function AuthPage({ register = false }) {
 
 function AppFrame({ children }) {
   const { session, signOut } = useSession();
-  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
   return <div className="app-shell">
-    {location.pathname === '/dashboard' && <AmbientParticles />}
     <header className="topbar glass-panel">
       <Brand />
       <nav className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
@@ -151,48 +149,6 @@ function useRooms() {
   }, [session]);
   useEffect(() => { refresh(); }, [refresh]);
   return { rooms, setRooms, loading, error, refresh };
-}
-
-const AMBIENT_PARTICLES = Array.from({ length: 52 }, (_, index) => ({
-  id: index,
-  left: `${(index * 47 + 9) % 100}%`,
-  top: `${(index * 67 + 13) % 100}%`,
-  size: `${2 + (index % 2)}px`,
-  duration: `${11 + (index * 5) % 10}s`,
-  delay: `-${(index * 11) % 24}s`,
-  opacity: `${0.4 + (index % 4) * 0.07}`,
-  sway: `${((index * 13) % 69) - 34}px`,
-  rise: `${42 + (index * 11) % 84}px`,
-  tone: ['lime', 'moss', 'sage', 'grey'][index % 4],
-}));
-
-function AmbientParticles() {
-  const [pageHidden, setPageHidden] = useState(false);
-
-  useEffect(() => {
-    const updateVisibility = () => setPageHidden(document.hidden);
-    updateVisibility();
-    document.addEventListener('visibilitychange', updateVisibility);
-    return () => document.removeEventListener('visibilitychange', updateVisibility);
-  }, []);
-
-  return <div className={`ambient-particles${pageHidden ? ' is-paused' : ''}`} aria-hidden="true">
-    {AMBIENT_PARTICLES.map((particle) => <span
-      key={particle.id}
-      className={`ambient-particle particle-${particle.tone}`}
-      style={{
-        left: particle.left,
-        top: particle.top,
-        width: particle.size,
-        height: particle.size,
-        '--particle-duration': particle.duration,
-        '--particle-delay': particle.delay,
-        '--particle-opacity': particle.opacity,
-        '--particle-sway': particle.sway,
-        '--particle-rise': particle.rise,
-      }}
-    />)}
-  </div>;
 }
 
 function readGuideDismissed(storageKey) {
@@ -425,7 +381,6 @@ function Dashboard() {
     <section className="dashboard-hero">
       <div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> YOUR TEAM, IN ONE PLACE</div><h1>Make space for<br /><span>good work.</span></h1><p>Shared notes, live thinking, and a little more room to do your best work.</p></div>
       <div className="hero-side glass-panel"><div className="hero-side-icon"><Sparkles size={17} /></div><div><span className="hero-side-label">A GOOD DAY TO MAKE THINGS</span><p>Hey, {greetingName}.<br />Your team is just a thought away.</p></div><div className="hero-side-mark">✳</div></div>
-      <div className="hero-orb orb-a" /><div className="hero-orb orb-b" />
     </section>
 
     <section className="workspace-section">
