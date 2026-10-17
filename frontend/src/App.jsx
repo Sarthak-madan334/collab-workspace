@@ -513,6 +513,7 @@ function RoomPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const [historyCursor, setHistoryCursor] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -722,10 +723,10 @@ function RoomPage() {
   };
   const rotateInvite = async () => {
     if (!window.confirm('Create a new invite code? The current code will stop admitting new people. Existing members keep access.')) return;
-    setBusy(true); setDrawerError('');
+    setInviteBusy(true); setDrawerError('');
     try { const data = await roomApi.rotateInvite(session.token, roomId); setInviteCode(data.inviteCode); }
     catch (error) { setDrawerError(error.message); }
-    finally { setBusy(false); }
+    finally { setInviteBusy(false); }
   };
   const copyInvite = async () => { try { await navigator.clipboard.writeText(inviteCode); setToast('Invite code copied.'); } catch { setToast('Copy is unavailable. Select and copy the code.'); } };
   const handleEdit = (event) => {
@@ -801,7 +802,7 @@ function RoomPage() {
       <div className="invite-code-box"><span>{inviteCode || 'Loading invite…'}</span><button className="icon-button" onClick={copyInvite} disabled={!inviteCode} aria-label="Copy invite code"><Copy size={16} /></button></div>
       <div className="invite-note"><ShieldCheck size={14} /> Rotating a code prevents new people from using the old one.</div>
       {drawerError && <div className="form-error" role="alert">{drawerError}</div>}
-      <div className="modal-actions"><GlassButton type="button" onClick={() => setInviteOpen(false)}>Done</GlassButton><GlassButton variant="primary" onClick={rotateInvite} disabled={busy || !inviteCode}><RefreshCw size={14} /> Rotate code</GlassButton></div>
+      <div className="modal-actions"><GlassButton type="button" onClick={() => setInviteOpen(false)}>Done</GlassButton><GlassButton variant="primary" onClick={rotateInvite} disabled={inviteBusy || !inviteCode}><RefreshCw size={14} /> Rotate code</GlassButton></div>
     </Modal>}
     {toast && <div className="toast glass-panel" role="status"><Check size={15} /> {toast}<button className="toast-close" onClick={() => setToast('')} aria-label="Dismiss"><X size={14} /></button></div>}
   </div>;
