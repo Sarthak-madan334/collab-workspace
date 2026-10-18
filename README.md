@@ -18,4 +18,6 @@ Synkro uses JavaScript across a React frontend and Node.js backend. Socket.IO ha
 
 The same React app is also packaged for Android with Capacitor. From `frontend`, run `npm ci` and `npm run android:sync`, then build the debug APK from `frontend/android` with `gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on macOS/Linux. Android Studio and an Android SDK are required; the complete Android setup, release signing, and testing guide is in [docs/android.md](docs/android.md).
 
+The website can also be installed as one PWA on iPhone and Android. Installation and online/offline behavior are described in [docs/pwa.md](docs/pwa.md).
+
 Synkro is being developed for TechSpace BuildLab '26 problem statement A04, Real-Time Collaborative Workspace.

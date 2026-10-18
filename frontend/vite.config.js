@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ command, mode }) => {
   if (command === 'build') {
@@ -27,5 +28,33 @@ export default defineConfig(({ command, mode }) => {
     }
   }
 
-  return { plugins: [react()] };
+  const pwa = VitePWA({
+    registerType: 'prompt',
+    injectRegister: 'script',
+    manifest: {
+      id: '/',
+      name: 'Synkro — Shared workspace',
+      short_name: 'Synkro',
+      description: 'A calm, shared space for teams to think and write together.',
+      start_url: '/',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#08090b',
+      theme_color: '#08090b',
+      icons: [
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      ],
+    },
+    workbox: {
+      globPatterns: ['**/*.{html,js,css,png,svg,webp,woff2}'],
+      navigateFallback: '/index.html',
+      navigateFallbackDenylist: [/^\/api\//],
+      cleanupOutdatedCaches: true,
+      maximumFileSizeToCacheInBytes: 1024 * 1024,
+    },
+  });
+
+  // Capacitor packages the same UI, but native builds do not register a second web service worker.
+  return { plugins: [react(), ...(mode === 'production' ? [pwa] : [])] };
 });
