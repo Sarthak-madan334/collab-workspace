@@ -56,10 +56,19 @@ const evaluate = async (expression) => {
 };
 
 mkdirSync('keyboard-smoke', { recursive: true });
-console.log('Initial WebView:', await evaluate('({ url: location.href, text: document.body?.innerText?.slice(0, 200) })'));
+let registerLink;
+for (let attempt = 0; attempt < 30; attempt += 1) {
+  try {
+    registerLink = await evaluate(`(() => { const el = document.querySelector('a[href="/register"]'); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+  } catch { /* The app is still loading. */ }
+  if (registerLink) break;
+  await pause(1000);
+}
+if (!registerLink) throw new Error(`Landing page did not load: ${JSON.stringify(await evaluate('({ url: location.href, text: document.body?.innerText?.slice(0, 200) })'))}`);
+console.log('Opening registration form from landing page');
 writeFileSync('keyboard-smoke/landing.png', execFileSync('adb', ['exec-out', 'screencap', '-p']));
-await send('Page.navigate', { url: 'https://localhost/register' });
-console.log('Opening registration form');
+await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: registerLink.x, y: registerLink.y }] });
+await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 let input;
 let lastEvaluationError;
 for (let attempt = 0; attempt < 30; attempt += 1) {
