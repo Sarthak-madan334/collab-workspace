@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
-  History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
+  Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
   LockKeyhole, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   X, Zap,
 } from 'lucide-react';
@@ -106,6 +106,7 @@ function AuthPage({ register = false }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   if (session) return <Navigate to="/dashboard" replace />;
@@ -128,7 +129,7 @@ function AuthPage({ register = false }) {
       <form onSubmit={submit} className="form-stack">
         {register && <label className="field-label">Your name<div className="input-wrap"><Users size={16} /><input autoComplete="name" required maxLength={50} value={name} onChange={(e) => setName(e.target.value)} placeholder="How should we call you?" /></div></label>}
         <label className="field-label">Email address<div className="input-wrap"><span className="at-icon">@</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourteam.com" /></div></label>
-        <label className="field-label">Password<div className="input-wrap"><KeyRound size={16} /><input type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={register ? 'At least 12 characters' : 'Enter your password'} /></div></label>
+        <div className="field-label"><label htmlFor={register ? 'register-password' : 'login-password'}>Password</label><div className="input-wrap"><KeyRound size={16} /><input id={register ? 'register-password' : 'login-password'} type={passwordVisible ? 'text' : 'password'} autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={register ? 'At least 12 characters' : 'Enter your password'} /><button className="password-toggle" type="button" aria-label={passwordVisible ? 'Hide password' : 'Show password'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((visible) => !visible)}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></div>
         {error && <div className="form-error" role="alert">{error}</div>}
         <button className="button button-primary auth-submit" disabled={busy}>{busy ? <ButtonLoader label={register ? 'Creating your space…' : 'Signing you in…'} /> : <>{register ? 'Create your account' : 'Sign in to Synkro'} <ArrowRight size={16} /></>}</button>
       </form>
@@ -144,18 +145,35 @@ function AppFrame({ children }) {
   const { session, signOut } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const topbarRef = useRef(null);
   const navigate = useNavigate();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setMobileOpen(false); };
+    const closeOnOutside = (event) => { if (!topbarRef.current?.contains(event.target)) setMobileOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('pointerdown', closeOnOutside);
+    };
+  }, [mobileOpen]);
+
   return <div className="app-shell">
-    <header className="topbar glass-panel">
+    <header ref={topbarRef} className="topbar glass-panel">
       <Brand />
-      <nav className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
-        <Link to="/dashboard" className="nav-link active"><LayoutGrid size={15} /> Workspace</Link>
+      <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
+        <Link to="/dashboard" className="nav-link active" onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Workspace</Link>
         <span className="nav-divider" />
         <span className="nav-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local demo · saved in this browser' : 'All systems calm'}</span>
       </nav>
       <div className="topbar-actions">
-        <button className="icon-button mobile-menu" onClick={() => setMobileOpen((value) => !value)} aria-label="Toggle navigation"><Menu size={19} /></button>
+        <button className="icon-button mobile-menu" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? 'Close workspace navigation' : 'Open workspace navigation'} aria-expanded={mobileOpen} aria-controls="workspace-navigation">{mobileOpen ? <X size={19} /> : <Menu size={19} />}</button>
         <button className="help-button" title="Help"><CircleHelp size={17} /><span>Help</span></button>
         <div className="profile-wrap">
           <button className="profile-button" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
@@ -478,13 +496,34 @@ function RoomCard({ room, index }) {
 
 function Modal({ title, subtitle, children, onClose }) {
   const onCloseRef = useRef(onClose);
+  const dialogRef = useRef(null);
+  const returnFocusRef = useRef(document.activeElement);
   onCloseRef.current = onClose;
   useEffect(() => {
-    const onKey = (event) => { if (event.key === 'Escape') onCloseRef.current(); };
+    const previousFocus = returnFocusRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [...(dialogRef.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), a[href]') || [])];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+      previousFocus?.focus?.();
+    };
   }, []);
-  return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
+  return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
 }
 
 function RoomPage() {
@@ -837,6 +876,7 @@ function SiteFooter() {
 
 function SiteNavigation({ session, privacy = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navRef = useRef(null);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 20);
   const [activeAnchor, setActiveAnchor] = useState(privacy ? '' : 'about');
 
@@ -862,7 +902,22 @@ function SiteNavigation({ session, privacy = false }) {
   const flowHref = privacy ? '/#how-it-works' : '#how-it-works';
   const closeMenu = () => setMenuOpen(false);
 
-  return <header className={`landing-nav glass-panel${scrolled ? ' is-scrolled' : ''}${menuOpen ? ' menu-is-open' : ''}`}>
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setMenuOpen(false); };
+    const closeOnOutside = (event) => { if (!navRef.current?.contains(event.target)) setMenuOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('pointerdown', closeOnOutside);
+    };
+  }, [menuOpen]);
+
+  return <header ref={navRef} className={`landing-nav glass-panel${scrolled ? ' is-scrolled' : ''}${menuOpen ? ' menu-is-open' : ''}`}>
     <Brand />
     <button className="landing-menu-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="landing-primary-nav" onClick={() => setMenuOpen((open) => !open)}>
       {menuOpen ? <X size={18} /> : <Menu size={18} />}

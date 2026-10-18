@@ -170,9 +170,10 @@ export default function FlowWaveBackground({ mode = 'hero', enabled = true }) {
     const pointerPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const pointerWorld = new THREE.Vector3();
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const smallScreen = window.matchMedia('(max-width: 700px)');
+    const smallScreen = window.matchMedia('(max-width: 900px)');
     const isReduced = reducedMotion.matches;
-    const isSmall = smallScreen.matches;
+    const isSmall = smallScreen.matches || window.matchMedia('(max-width: 900px) and (max-height: 500px)').matches;
+    const pointerEnabled = !isSmall && !window.matchMedia('(pointer: coarse)').matches;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, isSmall ? 1.15 : 1.6);
     const countX = isSmall ? 108 : 190;
     const countZ = isSmall ? 72 : 128;
@@ -311,8 +312,10 @@ export default function FlowWaveBackground({ mode = 'hero', enabled = true }) {
     updateScroll();
     window.addEventListener('resize', resize, { passive: true });
     window.addEventListener('scroll', updateScroll, { passive: true });
-    window.addEventListener('pointermove', updatePointer, { passive: true });
-    window.addEventListener('pointerleave', leavePointer, { passive: true });
+    if (pointerEnabled) {
+      window.addEventListener('pointermove', updatePointer, { passive: true });
+      window.addEventListener('pointerleave', leavePointer, { passive: true });
+    }
     document.addEventListener('visibilitychange', visibilityChange);
     if ('ResizeObserver' in window) {
       resizeObserver = new ResizeObserver(() => { resize(); updateScroll(); });
@@ -328,8 +331,10 @@ export default function FlowWaveBackground({ mode = 'hero', enabled = true }) {
       resizeObserver?.disconnect();
       window.removeEventListener('resize', resize);
       window.removeEventListener('scroll', updateScroll);
-      window.removeEventListener('pointermove', updatePointer);
-      window.removeEventListener('pointerleave', leavePointer);
+      if (pointerEnabled) {
+        window.removeEventListener('pointermove', updatePointer);
+        window.removeEventListener('pointerleave', leavePointer);
+      }
       document.removeEventListener('visibilitychange', visibilityChange);
       waveGeometry.dispose();
       waveMaterial.dispose();

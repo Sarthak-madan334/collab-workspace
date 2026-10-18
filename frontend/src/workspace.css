@@ -298,3 +298,133 @@
 @supports not (backdrop-filter: blur(1px)) {
   .app-shell :is(.glass-panel, .hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) { background: #06170e; }
 }
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding-top: max(9px, env(safe-area-inset-top));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .app-shell .topbar {
+    top: max(8px, env(safe-area-inset-top));
+    height: 60px;
+    gap: 9px;
+    padding-right: 8px;
+    padding-left: 12px;
+  }
+
+  .app-shell .topbar-actions { gap: 3px; }
+  .app-shell .mobile-menu { width: 44px; height: 44px; color: #c4d4c8; }
+  .app-shell .help-button { width: 44px; height: 44px; justify-content: center; padding: 0; }
+  .app-shell .profile-button { min-width: 44px; min-height: 44px; }
+  .app-shell .main-nav.nav-open {
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    max-height: calc(100svh - 110px);
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .app-shell .nav-open .nav-link { min-height: 48px; }
+  .app-shell .nav-open .nav-caption { min-height: 44px; font-size: 12px; }
+  .app-shell .dashboard-hero {
+    min-height: 0;
+    display: block;
+    padding: 25px 0 18px;
+  }
+  .app-shell .hero-copy h1 { font-size: clamp(38px, 10vw, 44px); line-height: 1.02; }
+  .app-shell .hero-copy > p { font-size: 15px; }
+  .app-shell .hero-side {
+    width: 100%;
+    min-height: 0;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px;
+  }
+  .app-shell .hero-side-icon { width: 30px; height: 30px; flex-basis: 30px; }
+  .app-shell .hero-side p { margin-top: 4px; font-size: 13px; }
+  .app-shell .workspace-section { padding-top: 0; }
+  .app-shell .section-heading { gap: 11px; margin-bottom: 13px; }
+  .app-shell .section-title-line { gap: 9px; margin-top: 4px; }
+  .app-shell .section-actions .button { min-height: 52px; font-size: 14px; }
+  .app-shell .room-grid { gap: 9px; }
+  .app-shell .room-card { min-height: 150px; padding: 14px; }
+  .app-shell .room-card-body { padding: 11px 0 9px; }
+  .app-shell .room-card-body h3 { font-size: 17px; line-height: 1.2; overflow-wrap: anywhere; }
+  .app-shell .room-card-body p { font-size: 13px; line-height: 1.45; }
+  .app-shell .room-card-footer { gap: 8px; padding-top: 9px; }
+  .app-shell .room-meta, .app-shell .room-open { font-size: 11px; }
+  .app-shell .room-title-wrap { align-items: flex-start; }
+  .app-shell .room-title-wrap h1 { max-width: none; overflow-wrap: anywhere; white-space: normal; font-size: clamp(19px, 6vw, 22px); line-height: 1.2; }
+  .app-shell .room-toolbar { width: 100%; flex-wrap: wrap; gap: 6px; }
+  .app-shell .connection-badge { min-height: 40px; font-size: 12px; }
+  .app-shell .toolbar-button { min-height: 44px; gap: 7px; padding: 0 10px; font-size: 13px; transition: color .18s ease, background-color .18s ease, border-color .18s ease; }
+  .app-shell .toolbar-button span { display: inline; }
+  .app-shell .editor-main { min-height: 0; }
+  .app-shell .note-editor { min-height: clamp(320px, 54svh, 440px); padding: 22px 20px; font-size: 16px; line-height: 1.65; }
+  .app-shell .editor-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .app-shell .modal-scrim { align-items: flex-end; padding: 0; }
+  .app-shell .modal-card {
+    width: 100%;
+    max-width: none;
+    max-height: 88svh;
+    overflow-y: auto;
+    padding: 25px 20px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+  .app-shell .modal-close { top: 11px; right: 12px; width: 44px; height: 44px; }
+  .app-shell .modal-card h2 { font-size: 25px; }
+  .app-shell .modal-card > p { font-size: 14px; }
+  .app-shell .modal-form { gap: 16px; margin-top: 22px; }
+  .app-shell .modal-actions { gap: 10px; }
+  .app-shell .modal-actions .button { min-height: 48px; flex: 1; font-size: 14px; }
+  .app-shell .field-label { font-size: 14px; }
+  .app-shell .input-wrap { min-height: 52px; }
+  .app-shell .input-wrap input { min-height: 50px; font-size: 16px; }
+  .app-shell .history-drawer { width: 100%; height: 100dvh; padding: max(20px, env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom)); border-radius: 0; }
+  .app-shell .history-item { min-height: 56px; }
+  .app-shell .app-footer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 360px) {
+  .app-shell .topbar { gap: 5px; }
+  .app-shell .topbar .brand { gap: 6px; }
+  .app-shell .topbar .brand-name { font-size: 14px; }
+  .app-shell .help-button { display: none; }
+  .app-shell .section-actions { gap: 8px; }
+  .app-shell .section-actions .button { padding-inline: 9px; font-size: 13px; }
+  .app-shell .hero-copy h1 { font-size: 36px; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 900px) {
+  .app-shell { padding-inline: max(16px, env(safe-area-inset-left)); }
+  .app-shell .topbar { height: 54px; }
+  .app-shell .mobile-menu { display: inline-grid; }
+  .app-shell .main-nav { display: none; }
+  .app-shell .main-nav.nav-open {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(4, 20, 12, .97);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .app-shell .dashboard-hero { min-height: 0; padding: 15px 0 12px; }
+  .app-shell .hero-side { display: none; }
+  .app-shell .hero-copy h1 { font-size: 34px; }
+  .app-shell .hero-copy > p { font-size: 13px; }
+  .app-shell .room-header { padding-block: 12px; }
+  .app-shell .editor-layout { grid-template-columns: minmax(0, 1fr); }
+  .app-shell .room-aside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell .room-aside-note, .app-shell .manage-invite { grid-column: 1 / -1; }
+}
