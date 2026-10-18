@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Network } from '@capacitor/network';
-import { SystemBars, SystemBarsStyle } from '@capacitor/core';
+import { SystemBars, SystemBarsStyle, SystemBarType } from '@capacitor/core';
 import { IS_ANDROID } from './native-session.js';
 
 const API_ORIGIN = import.meta.env.VITE_SOCKET_URL;
@@ -27,8 +27,13 @@ export default function NativeBridge() {
 
   useEffect(() => {
     if (!IS_ANDROID) return;
-    const workspace = location.pathname === '/dashboard' || location.pathname.startsWith('/rooms/');
-    SystemBars.setStyle({ style: workspace ? SystemBarsStyle.Light : SystemBarsStyle.Dark }).catch(() => {});
+    // The landing page has its own navigation; keep Android's bottom gesture bar,
+    // but remove the extra top system bar above the Synkro navigation.
+    const visibility = location.pathname === '/'
+      ? SystemBars.hide({ bar: SystemBarType.StatusBar })
+      : SystemBars.show({ bar: SystemBarType.StatusBar });
+    visibility.catch(() => {});
+    SystemBars.setStyle({ style: SystemBarsStyle.Dark }).catch(() => {});
   }, [location.pathname]);
 
   useEffect(() => {

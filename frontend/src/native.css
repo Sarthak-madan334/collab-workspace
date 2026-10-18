@@ -10,6 +10,7 @@ body.native-android :is(.app-shell, .auth-shell, .landing-page, .privacy-page) {
   padding-bottom: calc(12px + var(--native-bottom));
 }
 body.native-android .app-shell .topbar { top: calc(8px + var(--native-top)); }
+body.native-android .landing-nav { top: calc(12px + var(--native-top)); }
 body.native-android :is(.button, .icon-button, .profile-button, .toolbar-button, .help-button, .back-link, .text-button, .guide-replay-button, .mobile-menu, .modal-close, .history-item, .manage-invite) {
   min-height: 48px;
 }
@@ -53,9 +54,12 @@ body.native-android .native-network-banner button {
 }
 .native-startup { min-height: 100svh; display: grid; place-items: center; color: #dfe6e0; background: #08090b; font: 600 15px 'Manrope', sans-serif; }
 @media (max-width: 760px) {
-  body.native-android .auth-visual { display: none; }
-  body.native-android .auth-content { padding-top: 24px; }
-  body.native-android .auth-story { padding-top: 0; }
+  body.native-android .auth-shell { overflow: visible; }
+  body.native-android .auth-shell::before, body.native-android .auth-shell::after { display: none; }
+  body.native-android .auth-context, body.native-android .auth-story { display: none; }
+  body.native-android .auth-content { width: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 0; padding: 28px 0 36px; }
+  body.native-android .auth-form-wrap { width: 100%; }
+  body.native-android .auth-card { margin-inline: auto; }
 }
 @media (max-width: 420px) {
   body.native-android .dashboard-hero { padding-top: 30px; }
