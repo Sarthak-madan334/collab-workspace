@@ -1,0 +1,68 @@
+/* Only the bundled Android WebView receives these safe-area and touch adjustments. */
+body.native-android {
+  --native-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --native-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  background: #08090b;
+  overscroll-behavior-y: none;
+}
+body.native-android :is(.app-shell, .auth-shell, .landing-page, .privacy-page) {
+  padding-top: calc(12px + var(--native-top));
+  padding-bottom: calc(12px + var(--native-bottom));
+}
+body.native-android .app-shell .topbar { top: calc(8px + var(--native-top)); }
+body.native-android :is(.button, .icon-button, .profile-button, .toolbar-button, .help-button, .back-link, .text-button, .guide-replay-button, .mobile-menu, .modal-close, .history-item, .manage-invite) {
+  min-height: 48px;
+}
+body.native-android :is(.icon-button, .mobile-menu, .modal-close) { min-width: 48px; }
+body.native-android :is(a, button, input, textarea):focus-visible { outline: 2px solid #c9f06b; outline-offset: 3px; }
+body.native-android :is(.input-wrap, .input-wrap input) { min-height: 48px; }
+body.native-android :is(input, textarea) { font-size: 16px; }
+body.native-android .note-editor { min-height: 45svh; }
+body.native-android .modal-scrim { overflow-y: auto; align-items: safe center; padding-bottom: calc(24px + var(--native-bottom)); }
+body.native-android .history-drawer { padding-bottom: calc(24px + var(--native-bottom)); }
+body.native-android .native-network-banner {
+  position: fixed;
+  z-index: 100;
+  top: calc(8px + var(--native-top));
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 9px 11px 9px 15px;
+  color: #eef0ed;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 13px;
+  background: rgba(31,35,40,.94);
+  box-shadow: 0 12px 32px rgba(0,0,0,.25);
+  backdrop-filter: blur(14px);
+  font-size: 13px;
+  line-height: 1.4;
+}
+body.native-android .native-network-banner button {
+  flex: 0 0 auto;
+  min-width: 62px;
+  min-height: 48px;
+  color: #11171b;
+  border: 0;
+  border-radius: 9px;
+  background: #c9f06b;
+  font-weight: 700;
+}
+.native-startup { min-height: 100svh; display: grid; place-items: center; color: #dfe6e0; background: #08090b; font: 600 15px 'Manrope', sans-serif; }
+@media (max-width: 760px) {
+  body.native-android .auth-visual { display: none; }
+  body.native-android .auth-content { padding-top: 24px; }
+  body.native-android .auth-story { padding-top: 0; }
+}
+@media (max-width: 420px) {
+  body.native-android .dashboard-hero { padding-top: 30px; }
+  body.native-android .room-toolbar { gap: 8px; }
+  body.native-android .section-actions .button { min-height: 48px; }
+  body.native-android .note-editor { padding-inline: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.native-android *, body.native-android *::before, body.native-android *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

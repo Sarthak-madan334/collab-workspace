@@ -3,6 +3,7 @@ import {
   DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD, DEMO_TOKEN, DEMO_USER,
   demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
 } from './demo.js';
+import { IS_ANDROID } from './native-session.js';
 
 export class ApiError extends Error {
   constructor(message, code, status) {
@@ -25,8 +26,11 @@ export async function request(path, { token, ...options } = {}) {
       },
     });
   } catch {
+    if (IS_ANDROID) window.dispatchEvent(new Event('synkro:api-network-error'));
     throw new ApiError('The workspace server could not be reached. Check your connection and try again.', 'NETWORK_ERROR', 0);
   }
+
+  if (IS_ANDROID) window.dispatchEvent(new Event('synkro:api-success'));
 
   let payload;
   try { payload = await response.json(); } catch { payload = {}; }

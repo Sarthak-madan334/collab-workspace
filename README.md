@@ -16,4 +16,6 @@ The core editor uses server-ordered last-write-wins updates. Concurrent edits ar
 
 Synkro uses JavaScript across a React frontend and Node.js backend. Socket.IO handles live collaboration, and MongoDB Atlas stores users, rooms, notes, and revision history. The frontend is hosted on Vercel, with the persistent backend on Render.
 
+The same React app is also packaged for Android with Capacitor. From `frontend`, run `npm ci` and `npm run android:sync`, then build the debug APK from `frontend/android` with `gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on macOS/Linux. Android Studio and an Android SDK are required; the complete Android setup, release signing, and testing guide is in [docs/android.md](docs/android.md).
+
 Synkro is being developed for TechSpace BuildLab '26 problem statement A04, Real-Time Collaborative Workspace.

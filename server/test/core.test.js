@@ -55,6 +55,8 @@ test('production config requires an exact HTTPS frontend origin', () => {
   const base = { NODE_ENV: 'production', MONGODB_URI: 'mongodb://localhost', MONGODB_DB_NAME: 'synkro_test' };
   assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'http://example.com' }), /HTTPS/);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('https://example.com'), true);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('https://localhost'), true);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('http://localhost'), false);
 });
 
 test('rate-limit storage stays bounded under distinct keys', () => {

@@ -1,0 +1,29 @@
+{
+  "appId": "com.synkro.app",
+  "appName": "Synkro",
+  "webDir": "dist",
+  "backgroundColor": "#08090B",
+  "server": {
+    "hostname": "localhost",
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#08090B"
+  },
+  "plugins": {
+    "App": {
+      "disableBackButtonHandler": true
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "style": "DARK"
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 700,
+      "backgroundColor": "#08090B",
+      "androidSplashResourceName": "synkro_splash",
+      "showSpinner": false
+    }
+  }
+}

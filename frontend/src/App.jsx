@@ -11,15 +11,53 @@ import {
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
+import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
+import NativeBridge from './NativeBridge.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
+  const [ready, setReady] = useState(!IS_ANDROID);
+  useEffect(() => {
+    if (!IS_ANDROID) return undefined;
+    let active = true;
+    restoreNativeSession().then((saved) => {
+      if (!active) return;
+      setSession(saved);
+      setReady(true);
+      if (saved) authApi.me(saved.token).then((data) => {
+        if (active) setSession((current) => current?.token === saved.token ? { ...current, user: data.user, expiresAt: data.expiresAt || current.expiresAt } : current);
+      }).catch((error) => {
+        if (active && error.status === 401) setSession((current) => current?.token === saved.token ? null : current);
+      });
+    }).catch(() => { if (active) setReady(true); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (ready && IS_ANDROID) persistNativeSession(session).catch(() => {});
+  }, [ready, session]);
+  useEffect(() => {
+    if (!IS_ANDROID || !session?.token) return undefined;
+    let active = true;
+    const validate = async () => {
+      if (Date.parse(session.expiresAt) <= Date.now()) { setSession(null); return; }
+      try { await authApi.me(session.token); }
+      catch (error) { if (active && error.status === 401) setSession((current) => current?.token === session.token ? null : current); }
+    };
+    window.addEventListener('synkro:resumed', validate);
+    window.addEventListener('synkro:connectivity-restored', validate);
+    return () => {
+      active = false;
+      window.removeEventListener('synkro:resumed', validate);
+      window.removeEventListener('synkro:connectivity-restored', validate);
+    };
+  }, [session?.token, session?.expiresAt]);
   const signOut = useCallback(async () => {
     if (session?.token) await authApi.logout(session.token).catch(() => {});
+    if (IS_ANDROID) await persistNativeSession(null).catch(() => {});
     setSession(null);
   }, [session]);
   const value = useMemo(() => ({ session, setSession, signOut }), [session, signOut]);
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return <SessionContext.Provider value={value}>{ready ? children : <div className="native-startup" role="status">Opening Synkro…</div>}</SessionContext.Provider>;
 }
 
 const SessionContext = createContext(null);
@@ -635,6 +673,24 @@ function RoomPage() {
   }, [note, syncNow]);
 
   useEffect(() => {
+    if (!IS_ANDROID) return undefined;
+    const pause = () => socketRef.current?.disconnect();
+    const resume = () => {
+      const socket = socketRef.current;
+      if (socket && !socket.connected) socket.connect();
+      else syncNow();
+    };
+    window.addEventListener('synkro:paused', pause);
+    window.addEventListener('synkro:resumed', resume);
+    window.addEventListener('synkro:connectivity-restored', resume);
+    return () => {
+      window.removeEventListener('synkro:paused', pause);
+      window.removeEventListener('synkro:resumed', resume);
+      window.removeEventListener('synkro:connectivity-restored', resume);
+    };
+  }, [syncNow]);
+
+  useEffect(() => {
     if (!toast) return undefined;
     const timeout = window.setTimeout(() => setToast(''), 4200);
     return () => window.clearTimeout(timeout);
@@ -719,7 +775,7 @@ function RoomPage() {
 
   if (!room && !pageError) return <div className="room-loading"><span className="spinner" /> Opening your room…</div>;
 
-  return <div className="room-page">
+  return <div className="room-page" data-unsaved={dirty || ['pending', 'saving', 'failed', 'review'].includes(saveState)}>
     <div className="room-breadcrumb"><button className="back-link" onClick={() => navigate('/dashboard')}><ArrowLeft size={15} /> Your rooms</button><span className="crumb-divider">/</span><span>{room?.name || 'Shared room'}</span></div>
     <div className="room-header"><div className="room-title-wrap"><div className="room-title-icon"><FileClock size={19} /></div><div><div className="section-kicker">SHARED ROOM</div><h1>{room?.name || 'Shared notes'}</h1></div></div><div className="room-toolbar">
       <div className={`connection-badge tone-${statusTone}`} aria-live="polite"><span className="connection-dot" /><span>{statusText}</span>{saveState === 'failed' && <button onClick={retrySave} className="retry-link">Review</button>}</div>
@@ -1307,7 +1363,7 @@ function PrivacyPage() {
 }
 
 export default function App() {
-  return <AuthContext><Routes>
+  return <AuthContext><NativeBridge /><Routes>
     <Route path="/" element={<LandingPage />} />
     <Route path="/privacy" element={<PrivacyPage />} />
     <Route path="/login" element={<AuthPage />} />

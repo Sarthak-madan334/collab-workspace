@@ -6,7 +6,7 @@ import { RateLimiter } from '../src/rate-limit.js';
 
 test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async (t) => {
   let ready = true;
-  const config = { origins: new Set(['http://localhost:5173']), trustProxyHops: 0, logLevel: 'silent' };
+  const config = { origins: new Set(['http://localhost:5173', 'https://localhost']), trustProxyHops: 0, logLevel: 'silent' };
   const auth = { authenticate: async () => ({ user: { _id: 'user' } }), me: async () => ({ user: { id: 'user' } }) };
   const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, limiter: new RateLimiter(), ready: () => ready });
   const server = createServer(app);
@@ -23,6 +23,9 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   assert.equal(unauthed.response.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5173');
   assert.equal(unauthed.response.headers.get('Cache-Control'), 'no-store');
   assert.equal(unauthed.response.headers.get('X-Content-Type-Options'), 'nosniff');
+  const android = await fetchJson('/health/ready', { headers: { Origin: 'https://localhost' } });
+  assert.equal(android.response.status, 200);
+  assert.equal(android.response.headers.get('Access-Control-Allow-Origin'), 'https://localhost');
   assert.equal((await fetchJson('/health/ready')).body.status, 'ok');
   const huge = await fetchJson('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ padding: 'x'.repeat(300_000) }) });
   assert.equal(huge.response.status, 413);

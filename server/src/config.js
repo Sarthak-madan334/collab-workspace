@@ -24,7 +24,9 @@ export function loadConfig(env = process.env) {
   }
   return {
     production, port, mongoUri: env.MONGODB_URI, dbName: env.MONGODB_DB_NAME,
-    origins: new Set(origins), sessionTtlMs: sessionHours * 60 * 60 * 1000,
+    // Capacitor serves bundled Android assets from this fixed HTTPS origin.
+    // Keep the web origins explicit; the native app still needs a valid bearer token.
+    origins: new Set([...origins, 'https://localhost']), sessionTtlMs: sessionHours * 60 * 60 * 1000,
     trustProxyHops, logLevel: env.LOG_LEVEL || 'info',
   };
 }
