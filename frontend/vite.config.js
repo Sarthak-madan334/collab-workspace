@@ -55,6 +55,12 @@ export default defineConfig(({ command, mode }) => {
     },
   });
 
+  // The Android WebView draws edge-to-edge; keep this viewport setting out of the web/PWA build.
+  const androidViewport = {
+    name: 'android-viewport-fit',
+    transformIndexHtml: (html) => html.replace('initial-scale=1.0', 'initial-scale=1.0, viewport-fit=cover'),
+  };
+
   // Capacitor packages the same UI, but native builds do not register a second web service worker.
-  return { plugins: [react(), ...(mode === 'production' ? [pwa] : [])] };
+  return { plugins: [react(), ...(mode === 'android' ? [androidViewport] : []), ...(mode === 'production' ? [pwa] : [])] };
 });
