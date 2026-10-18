@@ -4,8 +4,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const adb = (...args) => execFileSync('adb', args, { encoding: 'utf8' }).trim();
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+console.log('Installing APK on Android 16 emulator');
 adb('install', '-r', 'frontend/android/app/build/outputs/apk/debug/app-debug.apk');
 adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1');
+console.log('Opening Synkro');
 adb('shell', 'am', 'start', '-n', 'com.synkro.app/.MainActivity');
 
 let pid;
@@ -15,6 +17,7 @@ for (let attempt = 0; attempt < 30; attempt += 1) {
   await pause(1000);
 }
 if (!pid) throw new Error('Synkro did not start');
+console.log(`WebView process ${pid} started`);
 adb('forward', 'tcp:9222', `localabstract:webview_devtools_remote_${pid}`);
 
 let target;
@@ -27,6 +30,7 @@ for (let attempt = 0; attempt < 30; attempt += 1) {
   await pause(1000);
 }
 if (!target) throw new Error('WebView debugger did not become available');
+console.log('WebView debugger connected');
 
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => {
@@ -52,6 +56,7 @@ const evaluate = async (expression) => {
 };
 
 await send('Page.navigate', { url: 'https://localhost/register' });
+console.log('Opening registration form');
 let input;
 for (let attempt = 0; attempt < 30; attempt += 1) {
   try {
@@ -61,6 +66,7 @@ for (let attempt = 0; attempt < 30; attempt += 1) {
   await pause(1000);
 }
 if (!input) throw new Error('Registration email field did not load');
+console.log('Registration email field loaded');
 
 mkdirSync('keyboard-smoke', { recursive: true });
 const before = await evaluate('({ innerHeight, visualHeight: visualViewport?.height })');

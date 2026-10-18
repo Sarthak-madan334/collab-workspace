@@ -29,6 +29,8 @@ jobs:
         working-directory: frontend
       - run: ./gradlew --no-daemon assembleDebug
         working-directory: frontend/android
+      - name: Enable emulator hardware acceleration
+        run: sudo chmod 666 /dev/kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
