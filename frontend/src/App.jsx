@@ -13,6 +13,7 @@ import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import NativeBridge from './NativeBridge.jsx';
+import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -128,7 +129,7 @@ function AuthPage({ register = false }) {
         <label className="field-label">Email address<div className="input-wrap"><span className="at-icon">@</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourteam.com" /></div></label>
         <label className="field-label">Password<div className="input-wrap"><KeyRound size={16} /><input type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={register ? 'At least 12 characters' : 'Enter your password'} /></div></label>
         {error && <div className="form-error" role="alert">{error}</div>}
-        <button className="button button-primary auth-submit" disabled={busy}>{busy ? <><span className="spinner" /> {register ? 'Creating your space…' : 'Signing you in…'}</> : <>{register ? 'Create your account' : 'Sign in to Synkro'} <ArrowRight size={16} /></>}</button>
+        <button className="button button-primary auth-submit" disabled={busy}>{busy ? <ButtonLoader label={register ? 'Creating your space…' : 'Signing you in…'} /> : <>{register ? 'Create your account' : 'Sign in to Synkro'} <ArrowRight size={16} /></>}</button>
       </form>
       {!register && DEMO_MODE && <div className="demo-access"><div><span className="demo-access-tag">LOCAL DEMO</span><span>Preview without a backend</span></div><div className="demo-credentials"><code>{DEMO_EMAIL}</code><code>{DEMO_PASSWORD}</code></div><button type="button" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setError(''); }}>Fill demo sign-in <ArrowDown size={13} /></button><small>Demo data stays in this browser. No server connection is used.</small></div>}
       <div className="auth-switch">{register ? 'Already have a space?' : 'New to Synkro?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'} <ArrowUpRight size={13} /></Link></div>
@@ -180,7 +181,7 @@ function useRooms() {
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
     if (!session) return;
-    setLoading(true); setError('');
+    setError('');
     try { const data = await roomApi.list(session.token); setRooms(data.items || data.rooms || []); }
     catch (err) { setError(err.message); }
     finally { setLoading(false); }
@@ -385,7 +386,7 @@ function Dashboard() {
   const [dialog, setDialog] = useState('');
   const [roomName, setRoomName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState('');
   const [message, setMessage] = useState('');
   const storageKey = `synkro-dashboard-onboarding:${session?.user?.id || session?.user?.email || 'user'}`;
   const [guideSeen, setGuideSeen] = useState(() => readGuideDismissed(storageKey));
@@ -402,16 +403,16 @@ function Dashboard() {
   }, [persistGuideDismissal]);
 
   const createRoom = async (event) => {
-    event.preventDefault(); setBusy(true); setMessage('');
+    event.preventDefault(); setBusyAction('create'); setMessage('');
     try { const result = await roomApi.create(session.token, roomName.trim()); const room = result.room || result; setRooms((current) => [room, ...current.filter((item) => item.id !== room.id)]); setDialog(''); navigate(`/rooms/${room.id}`, { state: { inviteCode: result.inviteCode } }); }
     catch (err) { setMessage(err.message); }
-    finally { setBusy(false); }
+    finally { setBusyAction(''); }
   };
   const joinRoom = async (event) => {
-    event.preventDefault(); setBusy(true); setMessage('');
+    event.preventDefault(); setBusyAction('join'); setMessage('');
     try { const result = await roomApi.join(session.token, inviteCode.trim()); const room = result.room || result; setDialog(''); navigate(`/rooms/${room.id}`); }
     catch (err) { setMessage(err.message); }
-    finally { setBusy(false); }
+    finally { setBusyAction(''); }
   };
 
   const greetingName = (session?.user?.name || 'there').split(' ')[0];
@@ -446,7 +447,7 @@ function Dashboard() {
       />
 
       {error && <div className="inline-alert" role="alert"><span>{error}</span><GlassButton onClick={refresh}><RefreshCw size={14} /> Retry</GlassButton></div>}
-      {loading ? <div className="room-grid">{[1, 2, 3].map((item) => <div className="room-card skeleton glass-panel" key={item}><i /><i /><i /></div>)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
+      {loading ? <div className="room-grid" role="status" aria-label="Loading your rooms">{[1, 2, 3].map((item) => <SkeletonLoader key={item} />)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
         <div className="room-card-top"><span className="create-card-icon"><Plus size={19} /></span><ArrowUpRight className="create-arrow" size={17} /></div>
         <div className="room-card-body"><span className="room-label">NEW ROOM</span><h3>Start with a blank page</h3><p>Create a room for your next idea</p></div>
         <div className="room-card-footer"><span className="room-meta"><Plus size={14} /> Blank page</span><span className="room-open">Create room <ArrowRight size={14} /></span></div>
@@ -456,10 +457,10 @@ function Dashboard() {
     <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>{DEMO_MODE ? 'A local preview space.' : 'Small edits, all in sync.'}</strong><p>{DEMO_MODE ? 'Demo changes are saved only in this browser.' : 'Updates travel with your room, so nobody has to ask for the latest copy.'}</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local sample content · not connected to a team' : 'Your spaces are private to you and your team.'}</span></section>
 
     {dialog && <Modal title={dialog === 'create' ? 'Make a new room' : 'Join your team'} subtitle={dialog === 'create' ? 'Give this shared space a name. You can invite people after.' : 'Paste an invite code from someone in your team.'} onClose={() => setDialog('')}>
-      <form onSubmit={dialog === 'create' ? createRoom : joinRoom} className="modal-form">
+      <form onSubmit={dialog === 'create' ? createRoom : joinRoom} className="modal-form" aria-busy={Boolean(busyAction)}>
         {dialog === 'create' ? <label className="field-label">Room name<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required minLength={1} maxLength={80} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="e.g. Product studio" /></div></label> : <label className="field-label">Invite code<div className="input-wrap"><KeyRound size={16} /><input autoFocus required value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Paste your invite code" /></div></label>}
         {message && <div className="form-error" role="alert">{message}</div>}
-        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')}>Cancel</GlassButton><GlassButton variant="primary" disabled={busy}>{busy ? <><span className="spinner" /> One moment…</> : <>{dialog === 'create' ? 'Create room' : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
+        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating room…' : 'Joining room…'} /> : <>{dialog === 'create' ? 'Create room' : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
       </form>
     </Modal>}
   </>;
@@ -510,6 +511,7 @@ function RoomPage() {
   const [historyItems, setHistoryItems] = useState([]);
   const [historyCursor, setHistoryCursor] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [busyRestore, setBusyRestore] = useState(false);
   const [conflict, setConflict] = useState(null);
@@ -712,8 +714,10 @@ function RoomPage() {
     finally { setHistoryLoading(false); }
   };
   const loadPreview = async (item) => {
+    setDrawerError(''); setPreviewLoading(true);
     try { const data = await roomApi.version(session.token, roomId, item.revision); setPreview(data.version || data); }
     catch (error) { setDrawerError(error.message); }
+    finally { setPreviewLoading(false); }
   };
   const restoreVersion = async () => {
     if (!preview || !isOwner) return;
@@ -770,18 +774,15 @@ function RoomPage() {
     setSaveState('review');
   };
 
-  const statusText = connection === 'reconnecting' ? 'Reconnecting' : connection === 'connecting' ? 'Connecting' : connection === 'error' ? 'Offline' : saveState === 'saving' ? 'Saving' : saveState === 'failed' ? 'Save failed' : saveState === 'paused' ? 'Waiting to reconnect' : saveState === 'review' ? 'Review changes' : dirty ? 'Unsaved changes' : 'Saved';
-  const statusTone = ['failed', 'error'].includes(connection) || saveState === 'failed' ? 'danger' : connection === 'live' && saveState === 'saved' && !dirty ? 'success' : 'neutral';
-
-  if (!room && !pageError) return <div className="room-loading"><span className="spinner" /> Opening your room…</div>;
+  if (!room && !pageError) return <PageLoader brand={<Brand />} label="Preparing your workspace…" />;
 
   return <div className="room-page" data-unsaved={dirty || ['pending', 'saving', 'failed', 'review'].includes(saveState)}>
     <div className="room-breadcrumb"><button className="back-link" onClick={() => navigate('/dashboard')}><ArrowLeft size={15} /> Your rooms</button><span className="crumb-divider">/</span><span>{room?.name || 'Shared room'}</span></div>
     <div className="room-header"><div className="room-title-wrap"><div className="room-title-icon"><FileClock size={19} /></div><div><div className="section-kicker">SHARED ROOM</div><h1>{room?.name || 'Shared notes'}</h1></div></div><div className="room-toolbar">
-      <div className={`connection-badge tone-${statusTone}`} aria-live="polite"><span className="connection-dot" /><span>{statusText}</span>{saveState === 'failed' && <button onClick={retrySave} className="retry-link">Review</button>}</div>
+      <ConnectionStatus connection={connection} saveState={saveState} dirty={dirty} onRetry={retrySave} />
       <div className="presence-stack" aria-label={`${presence.length} people online`}>{presence.slice(0, 4).map((person, index) => <span key={person.id} className={`avatar avatar-presence avatar-color-${index % 4}`} title={person.name}>{userInitials(person.name)}</span>)}{presence.length > 4 && <span className="avatar avatar-overflow">+{presence.length - 4}</span>}</div>
-      <button className="toolbar-button glass-panel" onClick={openHistory}><History size={15} /><span>History</span></button>
-      {isOwner && <button className="toolbar-button glass-panel" onClick={loadInvite}><Users size={15} /><span>Invite</span></button>}
+      <button className="toolbar-button glass-panel" onClick={openHistory} aria-label="Open room history"><History size={15} /><span>History</span></button>
+      {isOwner && <button className="toolbar-button glass-panel" onClick={loadInvite} aria-label="Manage room invitations"><Users size={15} /><span>Invite</span></button>}
     </div></div>
 
     {pageError && <div className="inline-alert" role="alert">{pageError}<GlassButton onClick={() => navigate('/dashboard')}>Back to rooms</GlassButton></div>}
@@ -795,7 +796,7 @@ function RoomPage() {
         <div className="editor-bottom"><div className="editor-author"><span className="avatar avatar-me">{userInitials(session.user.name)}</span><span>Editing as <strong>{session.user.name}</strong></span></div><span className="editor-help">Plain text <i /> Autosaves as you write</span></div>
       </main>
       <aside className="room-aside">
-        <section className="aside-card glass-panel"><div className="aside-card-head"><span className="aside-icon"><Users size={15} /></span><span>IN THIS ROOM</span><span className="aside-live"><i /> LIVE</span></div><div className="member-list">
+        <section className="aside-card glass-panel"><div className="aside-card-head"><span className="aside-icon"><Users size={15} /></span><span>IN THIS ROOM</span><span className={`aside-live${connection === 'live' ? ' is-connected' : ''}`}><i /> {connection === 'live' ? 'LIVE' : connection === 'reconnecting' ? 'RECONNECTING' : connection === 'error' ? 'OFFLINE' : 'CONNECTING'}</span></div><div className="member-list">
           {presence.length ? presence.map((person, index) => <div className="member-row" key={person.id}><span className={`avatar avatar-color-${index % 4}`}>{userInitials(person.name)}</span><span className="member-name">{person.name}{person.id === session.user.id && <small>you</small>}</span><span className="member-dot" title="Online" /></div>) : <p className="aside-empty">You’ll see your team here when they join.</p>}
         </div><div className="aside-foot"><span>{presence.length} {presence.length === 1 ? 'person' : 'people'} online</span><span className="member-spark">✳</span></div></section>
         <section className="aside-card room-tip glass-panel"><div className="aside-card-head"><span className="aside-icon tip-icon"><Sparkles size={15} /></span><span>A LITTLE TIP</span></div><p>Write freely. Everyone in this room sees the same page update as you go.</p><div className="tip-decoration">✳</div></section>
@@ -805,15 +806,15 @@ function RoomPage() {
     </div>
 
     {historyOpen && <div className="drawer-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) { setHistoryOpen(false); setPreview(null); } }}><aside className="history-drawer glass-panel" role="dialog" aria-modal="true" aria-labelledby="history-title"><div className="drawer-header"><div><span className="section-kicker">ROOM ACTIVITY</span><h2 id="history-title">Version history</h2><p>Every saved thought, right where you left it.</p></div><button className="icon-button" onClick={() => { setHistoryOpen(false); setPreview(null); }} aria-label="Close history"><X size={18} /></button></div>
-      {preview ? <div className="version-preview"><button className="back-link" onClick={() => setPreview(null)}><ArrowLeft size={14} /> All versions</button><div className="preview-meta"><span className="preview-rev">REV. {String(preview.revision).padStart(3, '0')}</span><span>{dateLabel(preview.createdAt)}</span></div><div className="preview-content">{preview.content || <em>This version is an empty page.</em>}</div>{isOwner && <GlassButton variant="primary" className="restore-button" onClick={restoreVersion} disabled={busyRestore}><RefreshCw size={15} /> {busyRestore ? 'Restoring…' : 'Restore this version'}</GlassButton>}</div> : <div className="history-list">{historyLoading && !historyItems.length ? <div className="history-loading"><span className="spinner" /> Gathering your versions…</div> : historyItems.length ? historyItems.map((item) => <button className="history-item" key={item.revision} onClick={() => loadPreview(item)}><span className={`history-kind kind-${item.kind || 'edit'}`}>{item.kind === 'restore' ? <RefreshCw size={14} /> : <FileClock size={14} />}</span><span className="history-item-main"><strong>Version {item.revision}{item.revision === note?.revision ? <small className="current-tag">CURRENT</small> : null}</strong><small>{item.authorName || 'A teammate'} · {dateLabel(item.createdAt)}</small></span><ArrowRight size={15} /></button>) : !drawerError ? <div className="history-empty"><Clock3 size={23} /><strong>No earlier versions yet.</strong><span>As your team writes, saved versions will show up here.</span></div> : null}{historyCursor != null && <GlassButton className="load-more" onClick={loadMoreHistory} disabled={historyLoading}>{historyLoading ? 'Loading…' : 'Load older versions'} <ArrowDownLeft size={14} /></GlassButton>}</div>}
+      {previewLoading ? <InlineLoader className="history-loading" label="Loading version…" /> : preview ? <div className="version-preview"><button className="back-link" onClick={() => setPreview(null)}><ArrowLeft size={14} /> All versions</button><div className="preview-meta"><span className="preview-rev">REV. {String(preview.revision).padStart(3, '0')}</span><span>{dateLabel(preview.createdAt)}</span></div><div className="preview-content">{preview.content || <em>This version is an empty page.</em>}</div>{isOwner && <GlassButton variant="primary" className="restore-button" onClick={restoreVersion} disabled={busyRestore}>{busyRestore ? <ButtonLoader label="Restoring…" /> : <><RefreshCw size={15} /> Restore this version</>}</GlassButton>}</div> : <div className="history-list">{historyLoading && !historyItems.length ? <InlineLoader className="history-loading" label="Gathering your versions…" /> : historyItems.length ? historyItems.map((item) => <button className="history-item" key={item.revision} onClick={() => loadPreview(item)}><span className={`history-kind kind-${item.kind || 'edit'}`}>{item.kind === 'restore' ? <RefreshCw size={14} /> : <FileClock size={14} />}</span><span className="history-item-main"><strong>Version {item.revision}{item.revision === note?.revision ? <small className="current-tag">CURRENT</small> : null}</strong><small>{item.authorName || 'A teammate'} · {dateLabel(item.createdAt)}</small></span><ArrowRight size={15} /></button>) : !drawerError ? <div className="history-empty"><Clock3 size={23} /><strong>No earlier versions yet.</strong><span>As your team writes, saved versions will show up here.</span></div> : null}{historyCursor != null && <GlassButton className="load-more" onClick={loadMoreHistory} disabled={historyLoading}>{historyLoading ? <ButtonLoader label="Loading…" /> : <>Load older versions <ArrowDownLeft size={14} /></>}</GlassButton>}</div>}
       {drawerError && <div className="form-error drawer-error" role="alert">{drawerError}</div>}
     </aside></div>}
 
     {inviteOpen && <Modal title="Bring your people in" subtitle="Share this invite code with teammates you trust. Anyone with the code can join." onClose={() => setInviteOpen(false)}>
-      <div className="invite-code-box"><span>{inviteCode || 'Loading invite…'}</span><button className="icon-button" onClick={copyInvite} disabled={!inviteCode} aria-label="Copy invite code"><Copy size={16} /></button></div>
+      <div className="invite-code-box">{inviteCode ? <span>{inviteCode}</span> : <InlineLoader label="Loading invite…" />}<button className="icon-button" onClick={copyInvite} disabled={!inviteCode} aria-label="Copy invite code"><Copy size={16} /></button></div>
       <div className="invite-note"><ShieldCheck size={14} /> Rotating a code prevents new people from using the old one.</div>
       {drawerError && <div className="form-error" role="alert">{drawerError}</div>}
-      <div className="modal-actions"><GlassButton type="button" onClick={() => setInviteOpen(false)}>Done</GlassButton><GlassButton variant="primary" onClick={rotateInvite} disabled={inviteBusy || !inviteCode}><RefreshCw size={14} /> Rotate code</GlassButton></div>
+  <div className="modal-actions"><GlassButton type="button" onClick={() => setInviteOpen(false)}>Done</GlassButton><GlassButton variant="primary" onClick={rotateInvite} disabled={inviteBusy || !inviteCode}>{inviteBusy ? <ButtonLoader label="Rotating code…" /> : <><RefreshCw size={14} /> Rotate code</>}</GlassButton></div>
     </Modal>}
     {toast && <div className="toast glass-panel" role="status"><Check size={15} /> {toast}<button className="toast-close" onClick={() => setToast('')} aria-label="Dismiss"><X size={14} /></button></div>}
   </div>;
@@ -1055,6 +1056,7 @@ function FlowWalkthrough({ onClose, exploreRoute }) {
 function LandingPage() {
   const { session } = useSession();
   const [activeFlow, setActiveFlow] = useState(0);
+  const [revealedFlowCards, setRevealedFlowCards] = useState([]);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const walkthroughTriggerRef = useRef(null);
   const closeWalkthrough = useCallback(() => {
@@ -1096,6 +1098,7 @@ function LandingPage() {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       setActiveFlow(index);
+      setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
     }
   };
 
@@ -1109,6 +1112,11 @@ function LandingPage() {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-visible');
+          const flowIndex = entry.target.dataset.flowIndex;
+          if (flowIndex !== undefined) {
+            const index = Number(flowIndex);
+            setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
+          }
           observer.unobserve(entry.target);
         }
       });
@@ -1192,8 +1200,12 @@ function LandingPage() {
         {flowCards.map((card, index) => (
           <article
             key={card.step}
-            className={`how-card glass-panel ${activeFlow === index ? 'is-active' : ''}`}
-            onClick={() => setActiveFlow(index)}
+            className={`how-card glass-panel ${activeFlow === index ? 'is-active' : ''} ${revealedFlowCards.includes(index) ? 'is-visible' : ''}`}
+            data-flow-index={index}
+            onClick={() => {
+              setActiveFlow(index);
+              setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
+            }}
             onKeyDown={(event) => onFlowKey(event, index)}
             tabIndex={0}
             role="button"
