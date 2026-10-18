@@ -55,20 +55,27 @@ const evaluate = async (expression) => {
   return result.result.result.value;
 };
 
+mkdirSync('keyboard-smoke', { recursive: true });
+console.log('Initial WebView:', await evaluate('({ url: location.href, text: document.body?.innerText?.slice(0, 200) })'));
+writeFileSync('keyboard-smoke/landing.png', execFileSync('adb', ['exec-out', 'screencap', '-p']));
 await send('Page.navigate', { url: 'https://localhost/register' });
 console.log('Opening registration form');
 let input;
+let lastEvaluationError;
 for (let attempt = 0; attempt < 30; attempt += 1) {
   try {
     input = await evaluate(`(() => { const el = document.querySelector('input[type="email"]'); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-  } catch { /* Navigation is still replacing the execution context. */ }
+  } catch (error) { lastEvaluationError = error; }
   if (input) break;
   await pause(1000);
 }
-if (!input) throw new Error('Registration email field did not load');
+if (!input) {
+  writeFileSync('keyboard-smoke/navigation-failed.png', execFileSync('adb', ['exec-out', 'screencap', '-p']));
+  console.log('Navigation result:', await evaluate('({ url: location.href, text: document.body?.innerText?.slice(0, 500) })').catch((error) => String(error)));
+  throw new Error(`Registration email field did not load. ${lastEvaluationError || ''}`);
+}
 console.log('Registration email field loaded');
 
-mkdirSync('keyboard-smoke', { recursive: true });
 const before = await evaluate('({ innerHeight, visualHeight: visualViewport?.height })');
 writeFileSync('keyboard-smoke/before.png', execFileSync('adb', ['exec-out', 'screencap', '-p']));
 await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: input.x, y: input.y }] });
