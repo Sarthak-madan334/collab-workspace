@@ -15,7 +15,7 @@
       "disableBackButtonHandler": true
     },
     "SystemBars": {
-      "insetsHandling": "native",
+      "insetsHandling": "disable",
       "style": "DARK"
     },
     "SplashScreen": {
