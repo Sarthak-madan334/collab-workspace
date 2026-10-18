@@ -196,3 +196,105 @@
   .app-shell :is(.glass-panel, .button, .room-card, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) { border: 1px solid CanvasText; box-shadow: none; }
   .app-shell :is(button, a, input, textarea):focus-visible { outline-color: Highlight; }
 }
+
+/* Flow Wave workspace palette: preserve the dense product layout on a quiet emerald field. */
+.app-shell {
+  --bg: #02160c;
+  --surface: rgba(8, 25, 17, .76);
+  --surface-strong: rgba(7, 22, 15, .94);
+  --line: rgba(150, 220, 175, .13);
+  --line-strong: rgba(150, 220, 175, .24);
+  --text: #e8f2ea;
+  --muted: #a0b4a5;
+  --subtle: #7e9584;
+  --lime: #7affbf;
+  --lime-dim: rgba(10, 255, 127, .1);
+  --danger: #ff9d91;
+  --glass-shadow: 0 18px 50px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(230, 255, 238, .07);
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+  color-scheme: dark;
+  background: transparent;
+}
+.app-shell :is(.topbar, .profile-menu, .hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) {
+  border-color: var(--line);
+  background: rgba(5, 22, 14, .78);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+}
+.app-shell .topbar { background: rgba(4, 19, 12, .84); }
+.app-shell :is(.profile-menu, .history-drawer, .modal-card) { background: rgba(4, 20, 12, .96); }
+.app-shell :is(.brand-name, .room-title-wrap h1, .section-heading h2, .drawer-header h2, .modal-card h2, .room-card-body h3, .manage-invite strong, .editor-author strong, .member-name) { color: #e8f2ea; }
+.app-shell :is(.eyebrow, .nav-link, .nav-caption, .help-button, .profile-button, .hero-copy h1, .hero-copy h1 span, .hero-copy > p, .hero-side p, .hero-side-label, .section-kicker, .count-pill, .room-card-body p, .room-meta, .room-label, .room-open, .room-create-card small, .empty-state > p, .bottom-note p, .dashboard-caption, .room-breadcrumb, .back-link, .crumb-divider, .connection-badge, .toolbar-button, .editor-context, .editor-version, .editor-author, .editor-help, .aside-card-head, .aside-live, .aside-empty, .aside-foot, .room-tip p, .manage-invite small, .room-aside-note, .drawer-header p, .history-item, .history-item-main small, .preview-meta, .history-empty, .field-label, .invite-note, .not-found p) { color: #a8b9ac; }
+.app-shell :is(.eyebrow-line, .nav-link.active::after, .status-dot, .member-dot, .aside-live i, .connection-dot, .guide-indicator) { background: #7affbf; }
+.app-shell :is(.brand-period, .footer-star, .room-open svg, .room-create-card .create-arrow, .hero-side-icon, .room-glyph, .create-card-icon, .bottom-note-icon, .room-title-icon, .editor-live-icon, .aside-icon, .conflict-icon, .history-kind, .manage-icon, .member-spark, .room-aside-note svg) { color: #7affbf; }
+.app-shell .brand-mark { border-color: rgba(122, 255, 191, .48); background: rgba(10, 255, 127, .07); }
+.app-shell .brand-mark::before, .app-shell .brand-mark::after { background: #7affbf; }
+.app-shell .brand-mark span { background: #06170e; }
+.app-shell .avatar { color: #d8f3e0; border-color: rgba(153, 220, 173, .2); background: #173323; }
+.app-shell :is(.avatar-color-1, .avatar-violet) { color: #f1e9cc; background: #393a2b; }
+.app-shell .avatar-color-3 { color: #d3eeee; background: #203a35; }
+.app-shell :is(.avatar-profile, .avatar-me) { color: #e3f6e9; background: #21452f; }
+.app-shell .button { color: #e4eee6; border-color: rgba(164, 220, 178, .2); background: rgba(14, 34, 23, .78); box-shadow: 0 8px 22px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(230, 255, 238, .07); }
+.app-shell .button:hover:not(:disabled) { color: #fff; border-color: rgba(165, 238, 187, .4); background: rgba(20, 46, 30, .9); }
+.app-shell .button-primary, .app-shell .section-actions .button-primary, .app-shell .section-actions .button-primary:hover:not(:disabled) { color: #032013; border-color: rgba(122, 255, 191, .82); background: #7affbf; box-shadow: 0 8px 22px rgba(0, 0, 0, .24), 0 0 20px rgba(10, 255, 127, .12); }
+.app-shell .button-primary:hover:not(:disabled), .app-shell .section-actions .button-primary:hover:not(:disabled) { background: #a5ffd0; }
+.app-shell :is(.hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite) { border-color: rgba(147, 219, 166, .14); background: rgba(6, 24, 15, .78); }
+.app-shell :is(.hero-side-icon, .room-glyph, .create-card-icon, .bottom-note-icon, .room-title-icon, .editor-live-icon, .aside-icon, .conflict-icon, .history-kind, .manage-icon) { color: #7affbf; border-color: rgba(122, 255, 191, .2); background: rgba(10, 255, 127, .07); box-shadow: none; }
+.app-shell .hero-side-mark { color: rgba(122, 255, 191, .12); }
+.app-shell .section-actions .button:not(.button-primary), .app-shell .guide-replay-button { color: #e1eee5; border-color: rgba(150, 220, 175, .19); background: rgba(11, 31, 19, .8); box-shadow: 0 8px 22px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(230, 255, 238, .06); }
+.app-shell .section-actions .button:not(.button-primary):hover, .app-shell .guide-replay-button:hover { color: #fff; border-color: rgba(165, 238, 187, .4); background: rgba(18, 43, 27, .92); }
+.app-shell .guide-replay-button svg { color: #a6d7b4; }
+.app-shell .section-actions .button.is-guide-target { border-color: #7affbf; box-shadow: 0 0 0 3px rgba(122, 255, 191, .15); }
+.app-shell .dashboard-onboarding-tooltip { color: #e8f2ea; border-color: rgba(122, 255, 191, .22); background: rgba(5, 23, 14, .96); box-shadow: 0 14px 38px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(230, 255, 238, .07); }
+.app-shell .dashboard-onboarding-tooltip strong { color: #e8f2ea; }
+.app-shell .dashboard-onboarding-tooltip p { color: #a8b9ac; }
+.app-shell .guide-close { color: #a8b9ac; }
+.app-shell .guide-close:hover { color: #fff; background: rgba(122, 255, 191, .08); }
+.app-shell .room-card:hover, .app-shell .room-card:focus-visible { border-color: rgba(122, 255, 191, .28); background: rgba(9, 31, 18, .9); box-shadow: 0 20px 47px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(230, 255, 238, .08); }
+.app-shell .room-card-footer, .app-shell .editor-topline, .app-shell .editor-bottom, .app-shell .aside-foot { border-color: rgba(150, 220, 175, .13); }
+.app-shell .room-create-card { background: rgba(7, 24, 14, .45); border-color: rgba(150, 220, 175, .24); box-shadow: inset 0 1px 0 rgba(230, 255, 238, .04); }
+.app-shell .room-create-card:hover, .app-shell .room-create-card:focus-visible { border-color: rgba(122, 255, 191, .5); background: rgba(10, 35, 19, .76); }
+.app-shell .room-create-card small, .app-shell .room-open, .app-shell .text-button { color: #a9d9b7; }
+.app-shell .skeleton i { background: rgba(183, 235, 195, .12); }
+.app-shell .bottom-note strong { color: #deeee2; }
+.app-shell .inline-alert { color: #ffb7ae; background: rgba(82, 28, 24, .28); border-color: rgba(255, 142, 131, .22); }
+.app-shell :is(.toolbar-button, .back-link):hover { color: #eaffef; background: rgba(122, 255, 191, .08); }
+.app-shell .connection-badge { color: #b6c8ba; background: rgba(8, 27, 16, .8); }
+.app-shell .conflict-banner { color: #dcebe0; border-color: rgba(122, 255, 191, .2); background: rgba(8, 27, 16, .9); }
+.app-shell .conflict-copy p { color: #a8b9ac; }
+.app-shell .note-editor { color: #e8f2ea; caret-color: #7affbf; }
+.app-shell .note-editor::placeholder { color: #829988; }
+.app-shell .note-editor:focus-visible { outline-color: #7affbf; }
+.app-shell :is(.member-name, .manage-invite strong) { color: #deeee2; }
+.app-shell .member-name small { color: #bde8ca; border-color: rgba(122, 255, 191, .18); background: rgba(10, 255, 127, .07); }
+.app-shell .topbar .nav-link.active::after { background: #7affbf; }
+.app-shell .profile-button:hover { background: rgba(122, 255, 191, .06); }
+.app-shell .profile-menu > button { color: #d2e1d6; }
+.app-shell .profile-menu > button:hover { color: #fff; background: rgba(122, 255, 191, .08); }
+.app-shell .app-footer { color: #718878; border-top-color: rgba(150, 220, 175, .13); }
+.app-shell .app-footer b { color: #a2b9a9; }
+.app-shell .room-loading .spinner, .app-shell .history-loading .spinner { border-color: rgba(122, 255, 191, .2); border-top-color: #7affbf; }
+.app-shell :is(.drawer-scrim, .modal-scrim) { background: rgba(0, 9, 4, .62); }
+.app-shell .drawer-header p, .app-shell .modal-card > p { color: #a8b9ac; }
+.app-shell .history-item { color: #b6c8ba; border-bottom-color: rgba(150, 220, 175, .12); }
+.app-shell .history-item:hover { color: #f1fff4; background: rgba(122, 255, 191, .06); }
+.app-shell .history-item-main strong { color: #e1eee5; }
+.app-shell .current-tag, .app-shell .preview-rev { color: #8fe4ad !important; border-color: rgba(122, 255, 191, .22); }
+.app-shell .history-empty, .app-shell .history-loading { color: #a8b9ac; }
+.app-shell .history-empty strong { color: #e1eee5; }
+.app-shell :is(.preview-content, .invite-code-box, .input-wrap) { color: #e3eee6; border-color: rgba(150, 220, 175, .18); background: rgba(2, 16, 9, .62); box-shadow: inset 0 1px 0 rgba(230, 255, 238, .035); }
+.app-shell .preview-content em { color: #91a697; }
+.app-shell .input-wrap:focus-within { border-color: rgba(122, 255, 191, .48); background: rgba(2, 19, 10, .82); }
+.app-shell .input-wrap input { color: #e8f2ea; }
+.app-shell .input-wrap input::placeholder { color: #829988; }
+.app-shell .invite-code-box span { color: #d7e8dc; }
+.app-shell .invite-note svg, .app-shell .toast > svg, .app-shell .toast-close { color: #7affbf; }
+.app-shell .toast { color: #e3eee6; border-color: rgba(122, 255, 191, .2); background: rgba(4, 20, 12, .96); box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+.app-shell :is(button, a, input, textarea):focus-visible, .app-shell .room-card:focus-visible { outline-color: #7affbf; }
+.app-shell .main-nav.nav-open { border-color: rgba(122, 255, 191, .2); background: rgba(4, 20, 12, .96); box-shadow: var(--glass-shadow); }
+@supports not (backdrop-filter: blur(1px)) {
+  .app-shell :is(.glass-panel, .hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card) { background: #06170e; }
+}
