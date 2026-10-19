@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
@@ -14,7 +14,6 @@ import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import NativeBridge from './NativeBridge.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
-import FlowWaveBackground from './FlowWaveBackground.jsx';
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -59,7 +58,7 @@ function AuthContext({ children }) {
     setSession(null);
   }, [session]);
   const value = useMemo(() => ({ session, setSession, signOut }), [session, signOut]);
-  return <SessionContext.Provider value={value}>{ready ? children : <PageLoader brand={<Brand />} label="Restoring your workspace…" />}</SessionContext.Provider>;
+  return <SessionContext.Provider value={value}>{ready ? children : <div className="native-startup" role="status">Opening Synkro…</div>}</SessionContext.Provider>;
 }
 
 const SessionContext = createContext(null);
@@ -1431,18 +1430,13 @@ function PrivacyPage() {
 }
 
 export default function App() {
-  const { pathname } = useLocation();
-  const mode = pathname === '/' ? 'hero' : ['/login', '/register'].includes(pathname) ? 'auth' : 'workspace';
-  return <>
-    <FlowWaveBackground mode={mode} enabled={pathname !== '/privacy'} />
-    <AuthContext><NativeBridge /><Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
-      <Route path="/login" element={<AuthPage />} />
-      <Route path="/register" element={<AuthPage register />} />
-      <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
-      <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes></AuthContext>
-  </>;
+  return <AuthContext><NativeBridge /><Routes>
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/privacy" element={<PrivacyPage />} />
+    <Route path="/login" element={<AuthPage />} />
+    <Route path="/register" element={<AuthPage register />} />
+    <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
+    <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes></AuthContext>;
 }
