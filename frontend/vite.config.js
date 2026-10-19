@@ -29,8 +29,8 @@ export default defineConfig(({ command, mode }) => {
   }
 
   const pwa = VitePWA({
-    registerType: 'prompt',
-    injectRegister: 'script',
+    registerType: 'autoUpdate',
+    injectRegister: 'auto',
     manifest: {
       id: '/',
       name: 'Synkro — Shared workspace',
