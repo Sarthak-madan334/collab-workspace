@@ -1135,6 +1135,7 @@ function LandingRibbon() {
       {ribbonStrands.slice(0, 15).map((index) => <path key={`lower-${index}`} d={`M${-140 + index * 11} ${760 + index * 8}C${210 + index * 4} ${697 + index * 3} ${445 + index * 2} ${530 + index} 577 476C${740 + index * 7} ${466 + index * 8} ${943 + index * 8} ${713 + index * 5} ${1460 + index * 6} ${887 + index * 8}`} strokeWidth={index % 5 === 0 ? 1.5 : .7} opacity={index % 4 === 0 ? .8 : .4} />)}
     </g>
     <path className="landing-signal-trace" d="M-110 790C250 762 470 554 577 476C685 340 770 208 891 249C1030 296 1110 79 1490-110" stroke="#F1FFD0" strokeWidth="2.4" />
+    <path className="landing-signal-trace landing-signal-trace-lower" d="M-130 830C240 762 444 558 577 476C748 491 964 720 1500 862" stroke="#E4FFB2" strokeWidth="1.9" />
   </svg>;
 }
 
@@ -1212,7 +1213,7 @@ function LandingPage() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const page = document.querySelector('.landing-page:not(.privacy-page)');
     if (!page) return undefined;
-    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-heading, .how-card, .foundation-card, .landing-stack, .landing-cta, .site-footer');
+    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-section, .how-heading, .how-card, .landing-manifesto, .landing-cta, .site-footer');
     page.classList.add('has-reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {

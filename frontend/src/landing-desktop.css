@@ -327,8 +327,8 @@
   .desktop-flow-node strong { margin-top: 5px; color: #f0f3ea; font: 600 11px 'Manrope', sans-serif; white-space: nowrap; }
   .desktop-flow-node > span:last-child { margin-top: 4px; color: #aeb9ab; font-size: 9px; white-space: nowrap; }
   .desktop-flow-room { top: 29%; left: 1%; width: 27%; }
-  .desktop-flow-writing { top: 0; left: 43%; width: 28%; animation: synkro-node-highlight 6s ease-in-out infinite; }
-  .desktop-flow-comment { bottom: 0; left: 43%; width: 28%; animation: synkro-node-highlight 6s ease-in-out -3s infinite; }
+  .desktop-flow-writing { top: 0; left: 43%; width: 28%; }
+  .desktop-flow-comment { bottom: 0; left: 43%; width: 28%; }
   .desktop-flow-synced { top: 29%; right: 0; width: 25%; border-color: rgba(198,243,91,.34); background: rgba(31,47,31,.83); }
   .desktop-flow-bottom { display: flex; align-items: center; justify-content: space-between; min-height: 62px; margin-top: 6px; padding: 0 27px; border-top: 1px solid rgba(255,255,255,.09); color: #aab6a7; font: 9px 'DM Mono', monospace; }
   .desktop-flow-bottom > span { display: inline-flex; align-items: center; gap: 8px; }
@@ -388,10 +388,94 @@
 @keyframes synkro-ribbon-drift { from { transform: translate3d(-7px,5px,0); opacity: .65; } to { transform: translate3d(9px,-5px,0); opacity: 1; } }
 @keyframes synkro-preview-enter { from { opacity: 0; transform: translate3d(30px,20px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 @keyframes synkro-flow-pulse { from { stroke-dashoffset: 765; } to { stroke-dashoffset: -765; } }
-@keyframes synkro-node-highlight { 0%, 18%, 75%, 100% { border-color: rgba(255,255,255,.14); box-shadow: 0 12px 25px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.09); } 35%, 56% { border-color: rgba(198,243,91,.53); box-shadow: 0 12px 28px rgba(0,0,0,.28), 0 0 24px rgba(198,243,91,.13); } }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-signal *,
   .desktop-flow-preview,
-  .desktop-flow-preview * { animation: none !important; }
+  .desktop-flow-preview *,
+  .desktop-flow-preview *::before,
+  .desktop-flow-preview *::after { animation: none !important; }
+}
+
+/* A paced product story: light arrives, teammates work, then the page responds. */
+@media (min-width: 1025px) and (prefers-reduced-motion: no-preference) {
+  .landing-page.has-reveal .landing-hero-copy,
+  .landing-page.has-reveal .landing-hero-art { opacity: 1; translate: 0 0; transition: none; }
+  .landing-page:not(.privacy-page) .landing-hero-copy .eyebrow { animation: synkro-hero-rise-soft .48s .02s both; }
+  .landing-page:not(.privacy-page) .landing-hero-copy h1 { animation: synkro-hero-rise-soft .7s .09s cubic-bezier(.18,.78,.2,1) both; }
+  .landing-page:not(.privacy-page) .landing-hero-copy > p { animation: synkro-hero-rise-soft .6s .22s both; }
+  .landing-page:not(.privacy-page) .landing-hero-actions { animation: synkro-hero-rise-soft .6s .36s both; }
+  .landing-page:not(.privacy-page) .landing-trust-line { animation: synkro-hero-rise-soft .6s .46s both; }
+
+  .landing-signal-upper { animation: synkro-ribbon-sweep 1.25s .05s cubic-bezier(.2,.72,.2,1) both, synkro-ribbon-drift 13s 1.3s ease-in-out infinite alternate; }
+  .landing-signal-lower { animation: synkro-ribbon-sweep 1.25s .18s cubic-bezier(.2,.72,.2,1) both, synkro-ribbon-drift 15s 1.43s ease-in-out infinite alternate-reverse; }
+  .landing-signal-aura { animation: synkro-ribbon-glow 1.2s .18s both; }
+  .landing-signal-core { animation: synkro-ribbon-glow 1.2s .18s both, synkro-core-breathe 8s 1.38s ease-in-out infinite alternate; }
+  .landing-page:not(.privacy-page) .landing-signal-trace { filter: drop-shadow(0 0 8px rgba(223,255,174,.9)); }
+  .landing-page:not(.privacy-page) .landing-signal-trace-lower { stroke-dasharray: 105 1300; animation-duration: 10.5s; animation-delay: -4s; opacity: .62; }
+
+  .desktop-flow-preview { animation: synkro-preview-enter .85s .18s cubic-bezier(.17,.76,.22,1) both, synkro-showcase-float 9s 1.03s ease-in-out infinite; }
+  .desktop-flow-heading { animation: synkro-hero-rise .55s .55s both; }
+  .desktop-flow-path { stroke-dasharray: 740; stroke-dashoffset: 740; animation: synkro-wire-draw 1.3s .65s ease-out both; }
+  .desktop-flow-room { animation: synkro-node-enter .58s .55s cubic-bezier(.18,.78,.2,1) both; }
+  .desktop-flow-writing { animation: synkro-node-enter .58s .85s cubic-bezier(.18,.78,.2,1) both; }
+  .desktop-flow-comment { animation: synkro-node-enter .58s 1.18s cubic-bezier(.18,.78,.2,1) both; }
+  .desktop-flow-writing::after,
+  .desktop-flow-comment::after { position: absolute; inset: -2px; border: 1px solid rgba(198,243,91,.45); border-radius: inherit; box-shadow: 0 0 22px rgba(198,243,91,.14); content: ''; pointer-events: none; opacity: 0; animation: synkro-node-glow 8s 1.5s ease-in-out infinite; }
+  .desktop-flow-comment::after { animation-delay: 4.2s; }
+  .desktop-flow-synced { animation: synkro-node-enter .58s 1.52s cubic-bezier(.18,.78,.2,1) both; }
+  .desktop-flow-writing > span:last-child { animation: synkro-type-loop 8s 1.5s steps(20,end) infinite; }
+  .desktop-flow-comment > span:last-child { animation: synkro-comment-loop 8s 1.5s ease-in-out infinite; }
+  .desktop-flow-synced::after { position: absolute; inset: -2px; border: 1px solid rgba(198,243,91,.56); border-radius: inherit; content: ''; pointer-events: none; opacity: 0; animation: synkro-sync-confirm 8s 1.5s ease-out infinite; }
+  .desktop-flow-live i { animation: synkro-live-breathe 2.5s ease-in-out infinite; }
+
+  .landing-intro.is-visible .landing-system-strip > div > span { animation: synkro-hero-rise .65s both; }
+  .landing-intro.is-visible .landing-system-strip > div > span:nth-child(1) { animation-delay: .08s; }
+  .landing-intro.is-visible .landing-system-strip > div > span:nth-child(2) { animation-delay: .18s; }
+  .landing-intro.is-visible .landing-system-strip > div > span:nth-child(3) { animation-delay: .28s; }
+  .landing-intro.is-visible .landing-system-strip > div > span:nth-child(4) { animation-delay: .38s; }
+  .landing-intro.is-visible .landing-system-strip > div > span:nth-child(5) { animation-delay: .48s; }
+  .how-section .how-flow-ribbon { opacity: 0; transform: translate3d(-48px,22px,0); }
+  .how-section.is-visible .how-flow-ribbon { animation: synkro-route-appear 1.45s ease-out both; }
+  .how-card.is-visible .how-card-art { animation: synkro-card-window .8s .18s cubic-bezier(.18,.78,.2,1) both; }
+  .landing-manifesto h2,
+  .landing-manifesto > span:first-child,
+  .landing-manifesto-mark { opacity: 0; }
+  .landing-manifesto.is-visible > span:first-child { animation: synkro-hero-rise .65s .1s both; }
+  .landing-manifesto.is-visible h2 { animation: synkro-manifesto-enter .9s .22s cubic-bezier(.16,.8,.2,1) both; }
+  .landing-manifesto.is-visible .landing-manifesto-mark { animation: synkro-hero-rise .65s .65s both; }
+  .landing-manifesto::before { transform: translateX(-7%); transition: transform 2.2s ease-out; }
+  .landing-manifesto.is-visible::before { transform: translateX(0); }
+}
+
+@supports ((animation-timeline: view()) and (animation-range: entry)) {
+  @media (min-width: 1025px) and (prefers-reduced-motion: no-preference) {
+    .how-section.is-visible .how-flow-ribbon {
+      animation: synkro-route-appear 1s linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 42%;
+    }
+  }
+}
+
+@keyframes synkro-hero-rise { from { opacity: 0; transform: translate3d(0,24px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes synkro-hero-rise-soft { from { opacity: .45; transform: translate3d(0,14px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes synkro-ribbon-sweep { from { opacity: 0; transform: translate3d(-65px,38px,0) scale(.97); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-ribbon-glow { from { opacity: 0; transform: scale(.75); } to { opacity: .9; transform: scale(1); } }
+@keyframes synkro-node-enter { from { opacity: 0; transform: translate3d(-15px,10px,0) scale(.96); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-node-glow { 0%, 12%, 45%, 100% { opacity: 0; } 22%, 35% { opacity: 1; } }
+@keyframes synkro-wire-draw { to { stroke-dashoffset: 0; } }
+@keyframes synkro-type-loop { 0%, 7% { clip-path: inset(0 100% 0 0); } 25%, 87% { clip-path: inset(0 0 0 0); } 98%, 100% { clip-path: inset(0 100% 0 0); } }
+@keyframes synkro-comment-loop { 0%, 24% { opacity: .25; transform: translate3d(0,4px,0); } 35%, 88% { opacity: 1; transform: translate3d(0,0,0); } 98%, 100% { opacity: .25; } }
+@keyframes synkro-sync-confirm { 0%, 45%, 73%, 100% { opacity: 0; transform: scale(.96); } 53% { opacity: .8; transform: scale(1); } 64% { opacity: 0; transform: scale(1.04); } }
+@keyframes synkro-live-breathe { 50% { opacity: .55; transform: scale(.8); } }
+@keyframes synkro-route-appear { to { opacity: .55; transform: translate3d(0,0,0); } }
+@keyframes synkro-card-window { from { opacity: 0; transform: translate3d(0,18px,0) scale(.96); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-manifesto-enter { from { opacity: 0; transform: translate3d(0,55px,0) scale(.94); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .landing-manifesto *,
+  .landing-page .how-flow-ribbon,
+  .landing-page .landing-system-strip *,
+  .landing-page .how-card-art { animation: none !important; opacity: 1 !important; transform: none !important; transition: none !important; }
 }
