@@ -438,17 +438,58 @@
   .how-section .how-flow-ribbon { opacity: 0; transform: translate3d(-48px,22px,0); }
   .how-section.is-visible .how-flow-ribbon { animation: synkro-route-appear 1.45s ease-out both; }
   .how-card.is-visible .how-card-art { animation: synkro-card-window .8s .18s cubic-bezier(.18,.78,.2,1) both; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-page.has-reveal .landing-manifesto {
+    opacity: .72;
+    transform: translate3d(0, 48px, 0) scale(.965);
+    transition: opacity .9s ease-out, transform 1.15s cubic-bezier(.16,.8,.2,1);
+  }
+  .landing-page.has-reveal .landing-manifesto.is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
   .landing-manifesto h2,
   .landing-manifesto > span:first-child,
   .landing-manifesto-mark { opacity: 0; }
-  .landing-manifesto.is-visible > span:first-child { animation: synkro-hero-rise .65s .1s both; }
-  .landing-manifesto.is-visible h2 { animation: synkro-manifesto-enter .9s .22s cubic-bezier(.16,.8,.2,1) both; }
-  .landing-manifesto.is-visible .landing-manifesto-mark { animation: synkro-hero-rise .65s .65s both; }
-  .landing-manifesto::before { transform: translateX(-7%); transition: transform 2.2s ease-out; }
+  .landing-manifesto.is-visible > span:first-child { animation: synkro-hero-rise .65s .12s both; }
+  .landing-manifesto.is-visible h2 { animation: synkro-manifesto-enter .95s .25s cubic-bezier(.16,.8,.2,1) both; }
+  .landing-manifesto.is-visible .landing-manifesto-mark { animation: synkro-hero-rise .7s .65s both; }
+  .landing-manifesto::before { transform: translateX(-7%); transition: transform 1.8s ease-out; }
   .landing-manifesto.is-visible::before { transform: translateX(0); }
 }
 
 @supports ((animation-timeline: view()) and (animation-range: entry)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .landing-page.has-reveal .landing-manifesto {
+      animation: synkro-manifesto-scroll 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry 0% cover 44%;
+      transition: none;
+    }
+    .landing-manifesto.is-visible > span:first-child {
+      animation: synkro-manifesto-copy 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry 6% cover 44%;
+    }
+    .landing-manifesto.is-visible h2 {
+      animation: synkro-manifesto-copy 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry 10% cover 51%;
+    }
+    .landing-manifesto.is-visible .landing-manifesto-mark {
+      animation: synkro-manifesto-mark 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry 18% cover 55%;
+    }
+    .landing-manifesto.is-visible::before {
+      animation: synkro-manifesto-lines 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry 6% cover 44%;
+      transition: none;
+    }
+  }
   @media (min-width: 1025px) and (prefers-reduced-motion: no-preference) {
     .how-section.is-visible .how-flow-ribbon {
       animation: synkro-route-appear 1s linear both;
@@ -472,6 +513,10 @@
 @keyframes synkro-route-appear { to { opacity: .55; transform: translate3d(0,0,0); } }
 @keyframes synkro-card-window { from { opacity: 0; transform: translate3d(0,18px,0) scale(.96); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
 @keyframes synkro-manifesto-enter { from { opacity: 0; transform: translate3d(0,55px,0) scale(.94); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-manifesto-scroll { from { opacity: .6; transform: translate3d(0,60px,0) scale(.94); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-manifesto-copy { from { opacity: 0; transform: translate3d(0,46px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes synkro-manifesto-mark { from { opacity: 0; transform: translate3d(0,30px,0) scale(.8); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes synkro-manifesto-lines { from { transform: translateX(-7%); } to { transform: translateX(0); } }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-page .landing-manifesto *,
