@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
@@ -13,9 +13,10 @@ import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
-import NativeBridge from './NativeBridge.jsx';
 import FlowStage from './FlowStage.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
+
+const NativeBridge = lazy(() => import('./NativeBridge.jsx'));
 
 function AuthContext({ children }) {
   const [session, setSession] = useState(null);
@@ -1293,6 +1294,15 @@ function LandingPage() {
     const page = document.querySelector('.landing-page:not(.privacy-page)');
     if (!page) return undefined;
     const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-section, .how-heading, .flow-stage, .landing-manifesto, .landing-cta, .site-footer');
+    // Keep the initial viewport visible while later sections still reveal on scroll.
+    const belowFold = Array.from(items).filter((item) => {
+      const bounds = item.getBoundingClientRect();
+      if (bounds.top < window.innerHeight && bounds.bottom > 0) {
+        item.classList.add('is-visible');
+        return false;
+      }
+      return true;
+    });
     page.classList.add('has-reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -1302,7 +1312,7 @@ function LandingPage() {
         }
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -35px 0px' });
-    items.forEach((item) => observer.observe(item));
+    belowFold.forEach((item) => observer.observe(item));
     return () => {
       observer.disconnect();
       page.classList.remove('has-reveal');
@@ -1420,7 +1430,7 @@ function PrivacyPage() {
 }
 
 export default function App() {
-  return <ThemeProvider><AuthContext><NativeBridge /><Routes>
+  return <ThemeProvider><AuthContext>{IS_ANDROID && <Suspense fallback={null}><NativeBridge /></Suspense>}<Routes>
     <Route path="/" element={<LandingPage />} />
     <Route path="/privacy" element={<PrivacyPage />} />
     <Route path="/login" element={<AuthPage />} />
