@@ -13,6 +13,7 @@ import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import NativeBridge from './NativeBridge.jsx';
+import FlowStage from './FlowStage.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
 
 function AuthContext({ children }) {
@@ -1163,7 +1164,6 @@ function LandingPage() {
   const { session } = useSession();
   const [motionPaused, setMotionPaused] = useState(false);
   const [activeFlow, setActiveFlow] = useState(0);
-  const [revealedFlowCards, setRevealedFlowCards] = useState([]);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const walkthroughTriggerRef = useRef(null);
   const closeWalkthrough = useCallback(() => {
@@ -1201,29 +1201,16 @@ function LandingPage() {
     },
   ];
 
-  const onFlowKey = (event, index) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      setActiveFlow(index);
-      setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
-    }
-  };
-
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const page = document.querySelector('.landing-page:not(.privacy-page)');
     if (!page) return undefined;
-    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-section, .how-heading, .how-card, .landing-manifesto, .landing-cta, .site-footer');
+    const items = page.querySelectorAll('.landing-hero-copy, .landing-hero-art, .landing-intro, .how-section, .how-heading, .flow-stage, .landing-manifesto, .landing-cta, .site-footer');
     page.classList.add('has-reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-visible');
-          const flowIndex = entry.target.dataset.flowIndex;
-          if (flowIndex !== undefined) {
-            const index = Number(flowIndex);
-            setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
-          }
           observer.unobserve(entry.target);
         }
       });
@@ -1306,108 +1293,7 @@ function LandingPage() {
         </div>
       </div>
 
-      <div className="how-grid">
-        {flowCards.map((card, index) => (
-          <article
-            key={card.step}
-            className={`how-card glass-panel ${activeFlow === index ? 'is-active' : ''} ${revealedFlowCards.includes(index) ? 'is-visible' : ''}`}
-            data-flow-index={index}
-            onClick={() => {
-              setActiveFlow(index);
-              setRevealedFlowCards((revealed) => revealed.includes(index) ? revealed : [...revealed, index]);
-            }}
-            onKeyDown={(event) => onFlowKey(event, index)}
-            tabIndex={0}
-            role="button"
-            aria-pressed={activeFlow === index}
-            aria-expanded={activeFlow === index}
-          >
-            <div className="how-card-top">
-              <span className="how-number">{card.step}</span>
-              <span className="how-icon">{card.icon}</span>
-            </div>
-
-            <div className={`how-card-art ${card.kind}-art ${activeFlow === index ? 'is-active' : ''}`}>
-              {card.kind === 'room' && (
-                <div className="mini-room-demo">
-                  <div className="mini-room-header">
-                    <span>Design Sprint</span>
-                    <span className="mini-live"><i /> live</span>
-                  </div>
-                  <div className="mini-room-avatars">
-                    <span className="mini-avatar avatar-olive">A</span>
-                    <span className="mini-avatar avatar-lime">P</span>
-                    <span className="mini-avatar avatar-violet">T</span>
-                    <span className="mini-avatar avatar-color-3">N</span>
-                  </div>
-                  <div className="mini-room-code"><span>ROOM CODE</span><strong>ST-291</strong></div>
-                </div>
-              )}
-
-              {card.kind === 'sync' && (
-                <div className="mini-sync-demo">
-                  <div className="mini-sync-lines"><i /><i /><i /></div>
-                  <div className="mini-sync-editor">
-                    <div className="mini-sync-toolbar">
-                      <span className="mini-dot" />
-                      <span>shared note</span>
-                    </div>
-                    <div className="mini-sync-text">
-                      <span className={`mini-typed ${activeFlow === index ? 'is-typing' : ''}`}>Let’s ship the draft before Friday.</span>
-                    </div>
-                  </div>
-                  <div className="mini-sync-people">
-                    <span className="mini-avatar avatar-olive">A</span>
-                    <span className="mini-avatar avatar-lime">P</span>
-                    <span className="mini-avatar avatar-violet">T</span>
-                  </div>
-                  <span className="mini-sync-status"><span className="status-dot" /> synced</span>
-                </div>
-              )}
-
-              {card.kind === 'history' && (
-                <div className="mini-history-demo">
-                  <div className={`mini-history-row is-selected ${activeFlow === index ? 'is-active' : ''}`}>
-                    <span>08</span>
-                    <i />
-                    <b>Latest notes</b>
-                    <small>NOW</small>
-                  </div>
-                  <div className="mini-history-row">
-                    <span>07</span>
-                    <i />
-                    <b>Project outline</b>
-                    <small>10:42</small>
-                  </div>
-                  <div className="mini-history-row">
-                    <span>06</span>
-                    <i />
-                    <b>First ideas</b>
-                    <small>09:18</small>
-                  </div>
-                  <div className="mini-history-panel">
-                    <span>Restored</span>
-                    <strong>Version 08</strong>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <h3>{card.title}</h3>
-            <p>{card.description}</p>
-
-            <div className="how-card-footer">
-              <Link
-                className="how-card-foot"
-                to={card.route}
-                onClick={(event) => event.stopPropagation()}
-              >
-                {card.hint} <ArrowUpRight size={13} />
-              </Link>
-            </div>
-          </article>
-        ))}
-      </div>
+      <FlowStage cards={flowCards} active={activeFlow} onSelect={setActiveFlow} LinkComponent={Link} />
       {walkthroughOpen && <FlowWalkthrough onClose={closeWalkthrough} exploreRoute={session ? '/dashboard' : '/register'} />}
     </section>
 
