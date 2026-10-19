@@ -5,6 +5,7 @@ import App from './App.jsx';
 import './styles.css';
 import './workspace.css';
 import './native.css';
+import './landing-desktop.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

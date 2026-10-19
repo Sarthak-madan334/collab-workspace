@@ -5,7 +5,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
+  LockKeyhole, MessageSquare, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
@@ -1108,8 +1108,59 @@ function FlowWalkthrough({ onClose, exploreRoute }) {
   </div>;
 }
 
+const ribbonStrands = Array.from({ length: 26 }, (_, index) => index);
+
+function LandingRibbon() {
+  return <svg className="landing-signal" viewBox="0 0 1400 850" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="synkro-ribbon" x1="140" y1="760" x2="1290" y2="100" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#C6F35B" stopOpacity="0" />
+        <stop offset=".36" stopColor="#C6F35B" stopOpacity=".38" />
+        <stop offset=".53" stopColor="#F1FFD0" stopOpacity=".95" />
+        <stop offset=".74" stopColor="#B9ED71" stopOpacity=".7" />
+        <stop offset="1" stopColor="#87C8B5" stopOpacity="0" />
+      </linearGradient>
+      <radialGradient id="synkro-ribbon-core"><stop stopColor="#E8FFC1" stopOpacity=".75" /><stop offset=".27" stopColor="#C6F35B" stopOpacity=".32" /><stop offset="1" stopColor="#C6F35B" stopOpacity="0" /></radialGradient>
+      <filter id="synkro-ribbon-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="15" /></filter>
+    </defs>
+    <ellipse className="landing-signal-core" cx="577" cy="476" rx="170" ry="135" fill="url(#synkro-ribbon-core)" />
+    <g className="landing-signal-aura" stroke="url(#synkro-ribbon)" strokeWidth="13" filter="url(#synkro-ribbon-blur)">
+      <path d="M-110 790C250 762 470 554 577 476C685 340 770 208 891 249C1030 296 1110 79 1490-110" />
+      <path d="M-130 830C240 762 444 558 577 476C748 491 964 720 1500 862" />
+    </g>
+    <g className="landing-signal-upper" stroke="url(#synkro-ribbon)">
+      {ribbonStrands.map((index) => <path key={`upper-${index}`} d={`M${-210 + index * 8} ${680 + index * 10}C${170 + index * 5} ${700 + index * 4} ${424 + index * 2} ${536 + index * 2} 577 476C${670 + index * 3} ${342 - index * 5} ${775 + index * 2} ${207 - index * 7} ${890 + index * 3} ${249 - index * 5}C${1025 + index * 3} ${298 - index * 6} ${1120 + index * 5} ${87 - index * 7} ${1430 + index * 8} ${-65 - index * 11}`} strokeWidth={index % 7 === 0 ? 1.7 : .7} opacity={index % 5 === 0 ? .95 : .5} />)}
+    </g>
+    <g className="landing-signal-lower" stroke="url(#synkro-ribbon)">
+      {ribbonStrands.slice(0, 15).map((index) => <path key={`lower-${index}`} d={`M${-140 + index * 11} ${760 + index * 8}C${210 + index * 4} ${697 + index * 3} ${445 + index * 2} ${530 + index} 577 476C${740 + index * 7} ${466 + index * 8} ${943 + index * 8} ${713 + index * 5} ${1460 + index * 6} ${887 + index * 8}`} strokeWidth={index % 5 === 0 ? 1.5 : .7} opacity={index % 4 === 0 ? .8 : .4} />)}
+    </g>
+    <path className="landing-signal-trace" d="M-110 790C250 762 470 554 577 476C685 340 770 208 891 249C1030 296 1110 79 1490-110" stroke="#F1FFD0" strokeWidth="2.4" />
+  </svg>;
+}
+
+function DesktopFlowPreview({ paused, onTogglePause }) {
+  return <div className="desktop-flow-preview" aria-label="Animated illustration of a Synkro room: one teammate writes, another comments, and the shared page updates">
+    <div className="desktop-flow-top"><span><span className="desktop-flow-brand"><Radio size={13} /></span> Synkro <span className="desktop-flow-separator">/</span> Design sprint</span><span className="desktop-flow-live"><i /> ROOM LIVE</span></div>
+    <div className="desktop-flow-heading"><div><span className="desktop-flow-kicker">SHARED WORKSPACE · 02 PEOPLE HERE</span><h2>Ideas in motion</h2></div><span className="desktop-flow-progress">All changes saved <Check size={13} /></span></div>
+    <div className="desktop-flow-map">
+      <svg viewBox="0 0 600 270" preserveAspectRatio="none" aria-hidden="true">
+        <path className="desktop-flow-path" d="M128 135H208C233 135 229 76 262 76H345M208 135C234 135 230 202 262 202H345M453 76H476C500 76 489 135 522 135H546M453 202H476C500 202 489 135 522 135H546" />
+        <path className="desktop-flow-pulse" d="M128 135H208C233 135 229 76 262 76H345M453 76H476C500 76 489 135 522 135H546" />
+        <path className="desktop-flow-pulse desktop-flow-pulse-second" d="M128 135H208C234 135 230 202 262 202H345M453 202H476C500 202 489 135 522 135H546" />
+      </svg>
+      <div className="desktop-flow-node desktop-flow-room"><span className="desktop-flow-node-icon"><Users size={16} /></span><small>ROOM</small><strong>Design sprint</strong><span>Shared space opened</span></div>
+      <div className="desktop-flow-node desktop-flow-writing"><span className="desktop-flow-node-icon"><PenLine size={16} /></span><small>WRITING</small><strong>Alex edits the note</strong><span>Drafting the first idea</span></div>
+      <div className="desktop-flow-node desktop-flow-comment"><span className="desktop-flow-node-icon"><MessageSquare size={16} /></span><small>COMMENT</small><strong>Priya adds context</strong><span>“Let's set a milestone.”</span></div>
+      <div className="desktop-flow-node desktop-flow-synced"><span className="desktop-flow-node-icon"><Check size={16} /></span><small>LIVE</small><strong>Everyone in sync</strong><span>One page, updated</span></div>
+    </div>
+    <div className="desktop-flow-bottom"><span><span className="desktop-flow-activity-dot" /> Changes appear for everyone in the room</span><div className="desktop-flow-avatars"><i>A</i><i>P</i><span>2 editing</span></div></div>
+    <button className="desktop-flow-pause" type="button" onClick={onTogglePause} aria-label={paused ? 'Play landing animation' : 'Pause landing animation'}>{paused ? <Play size={13} /> : <Pause size={13} />}</button>
+  </div>;
+}
+
 function LandingPage() {
   const { session } = useSession();
+  const [motionPaused, setMotionPaused] = useState(false);
   const [activeFlow, setActiveFlow] = useState(0);
   const [revealedFlowCards, setRevealedFlowCards] = useState([]);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
@@ -1195,9 +1246,11 @@ function LandingPage() {
   return <main className="landing-page" onMouseMove={moveSpotlight}>
     <SiteNavigation session={session} />
 
-    <section className="landing-hero" id="about">
-      <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1>Your team's notes,<br /><span>all in sync.</span></h1><p>Synkro brings your people into one calm workspace. Write together, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
+    <section className={`landing-hero${motionPaused ? ' motion-paused' : ''}`} id="about">
+      <LandingRibbon />
+      <div className="landing-hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> A SHARED SPACE FOR GOOD WORK</div><h1 className="hero-mobile-title">Your team's notes,<br /><span>all in sync.</span></h1><h1 className="hero-desktop-title">Shared notes.<br /><span>In sync.</span></h1><p>Synkro brings your people into one calm workspace. <span className="hero-copy-accent">Write together</span>, see who's around, and keep every good idea within reach.</p><div className="landing-hero-actions"><Link className="button button-primary" to={session ? '/dashboard' : '/register'}>Make a room <ArrowRight size={16} /></Link><a className="landing-learn-link" href="#how-it-works">See how it works <ArrowDown size={14} /></a></div><div className="landing-trust-line"><span className="status-dot" /> Private rooms <i /> Live presence <i /> Saved history</div></div>
       <div className="landing-hero-art hero-showcase" aria-label="Animated preview of a shared Synkro workspace">
+        <DesktopFlowPreview paused={motionPaused} onTogglePause={() => setMotionPaused((paused) => !paused)} />
         <div className="showcase-browser">
           <div className="showcase-topbar">
             <div className="showcase-window-controls" aria-hidden="true"><i /><i /><i /></div>
@@ -1233,9 +1286,10 @@ function LandingPage() {
       <a className="scroll-cue" href="#how-it-works"><span>SCROLL TO EXPLORE</span><ArrowDown size={13} /></a>
     </section>
 
-    <section className="landing-intro glass-panel" id="what-it-does"><div className="intro-index">01 <span>—</span> THE IDEA</div><div className="intro-content"><h2>Less passing files.<br /><span>More making progress.</span></h2><p>Teams often end up with notes scattered across chats and documents. Synkro gives a room one shared page, so everyone can follow the same thread, contribute as ideas arrive, and revisit earlier versions when plans change.</p></div><div className="intro-stamp"><span>MADE FOR</span><b>TEAMS<br />IN SYNC</b><i>✳</i></div></section>
+    <section className="landing-intro glass-panel" id="what-it-does"><div className="landing-system-strip" aria-label="What stays together in a Synkro room"><span>ONE ROOM, EVERY PART OF THE CONVERSATION</span><div><span><Users size={18} /> Rooms</span><span><PenLine size={18} /> Notes</span><span><Radio size={18} /> Presence</span><span><MessageSquare size={18} /> Comments</span><span><History size={18} /> History</span></div></div><div className="intro-index">01 <span>—</span> THE IDEA</div><div className="intro-content"><h2>Less passing files.<br /><span>More making progress.</span></h2><p>Teams often end up with notes scattered across chats and documents. Synkro gives a room one shared page, so everyone can follow the same thread, contribute as ideas arrive, and revisit earlier versions when plans change.</p></div><div className="intro-stamp"><span>MADE FOR</span><b>TEAMS<br />IN SYNC</b><i>✳</i></div></section>
 
     <section className="how-section" id="how-it-works">
+      <svg className="how-flow-ribbon" viewBox="0 0 1200 420" preserveAspectRatio="none" fill="none" aria-hidden="true"><path d="M-80 375C190 390 291 225 489 202S814 105 1270-50" /><path d="M-80 399C190 411 310 250 505 222S834 136 1270-18" /><path d="M-80 350C181 362 281 207 471 179S799 77 1270-77" /></svg>
       <div className="how-heading">
         <div className="how-heading-copy">
           <div className="eyebrow"><span className="eyebrow-line" /> THE FLOW</div>
@@ -1356,45 +1410,7 @@ function LandingPage() {
       {walkthroughOpen && <FlowWalkthrough onClose={closeWalkthrough} exploreRoute={session ? '/dashboard' : '/register'} />}
     </section>
 
-    <section className="landing-foundation" id="foundation" aria-labelledby="foundation-title">
-      <div className="foundation-heading">
-        <div className="foundation-heading-copy">
-          <div className="eyebrow"><span className="eyebrow-line" /> UNDER THE HOOD</div>
-          <h2 id="foundation-title">Simple on the surface.<br /><span>Powerful underneath.</span></h2>
-        </div>
-        <p>Four technologies working together to keep your team&apos;s workspace connected, responsive, and organized.</p>
-      </div>
-      <div className="foundation-grid">
-        <article className="foundation-card foundation-card-react">
-          <div className="foundation-card-top"><span className="foundation-number">01</span><span className="foundation-icon"><Monitor size={19} aria-hidden="true" /></span></div>
-          <span className="foundation-kind">INTERFACE</span>
-          <h3>React</h3>
-          <p>Builds the workspace interface and the controls your team uses.</p>
-          <div className="foundation-flow"><span>UI</span><ArrowRight size={14} aria-hidden="true" /><span>Your workspace</span></div>
-        </article>
-        <article className="foundation-card foundation-card-realtime">
-          <div className="foundation-card-top"><span className="foundation-number">02</span><span className="foundation-icon"><Activity size={19} aria-hidden="true" /></span></div>
-          <span className="foundation-kind">SERVER + EVENTS</span>
-          <h3>Node.js + Socket.IO</h3>
-          <p>The frontend supports room requests and live note events when a backend is configured. This repository does not include the server.</p>
-          <div className="foundation-flow"><span>HTTP + events</span><ArrowRight size={14} aria-hidden="true" /><span>Backend</span></div>
-        </article>
-        <article className="foundation-card foundation-card-data">
-          <div className="foundation-card-top"><span className="foundation-number">03</span><span className="foundation-icon"><Database size={19} aria-hidden="true" /></span></div>
-          <span className="foundation-kind">PLANNED STORAGE</span>
-          <h3>MongoDB Atlas</h3>
-          <p>Specified for storing rooms, notes, and revision history in the planned backend.</p>
-          <div className="foundation-flow"><span>Planned</span><ArrowRight size={14} aria-hidden="true" /><span>Persistent data</span></div>
-        </article>
-        <article className="foundation-card foundation-card-team">
-          <div className="foundation-card-top"><span className="foundation-number">04</span><span className="foundation-icon"><Users size={19} aria-hidden="true" /></span></div>
-          <span className="foundation-kind">THE RESULT</span>
-          <h3>Your team</h3>
-          <p>One shared room for notes, presence, and history. Live cross-user sync depends on a configured backend.</p>
-          <div className="foundation-flow"><span>Result</span><ArrowRight size={14} aria-hidden="true" /><span>Work together</span></div>
-        </article>
-      </div>
-    </section>
+    <section className="landing-manifesto" aria-labelledby="manifesto-title"><span>THE WORK FEELS BETTER TOGETHER</span><h2 id="manifesto-title">One room for the ideas<br /><em>you make together.</em></h2><span className="landing-manifesto-mark" aria-hidden="true"><Radio size={27} /></span></section>
 
     <section className="landing-cta glass-panel">
       <div className="cta-orbit cta-orbit-left" aria-hidden="true" />
