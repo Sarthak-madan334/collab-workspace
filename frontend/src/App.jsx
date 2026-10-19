@@ -6,12 +6,13 @@ import {
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
   LockKeyhole, MessageSquare, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
-  X, Zap,
+  Palette, X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
+import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
 import NativeBridge from './NativeBridge.jsx';
 import FlowStage from './FlowStage.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
@@ -64,6 +65,27 @@ function AuthContext({ children }) {
 
 const SessionContext = createContext(null);
 const useSession = () => useContext(SessionContext);
+const ThemeContext = createContext(null);
+const useWorkspaceTheme = () => useContext(ThemeContext);
+
+function ThemeProvider({ children }) {
+  const [theme, setCurrentTheme] = useState(() => readWorkspaceTheme());
+  const [storageError, setStorageError] = useState('');
+  const setTheme = useCallback((nextTheme) => {
+    setCurrentTheme(nextTheme);
+    try {
+      persistWorkspaceTheme(nextTheme);
+      setStorageError('');
+      return true;
+    } catch {
+      setStorageError('Theme changed for this visit, but could not be saved in this browser.');
+      return false;
+    }
+  }, []);
+  const value = useMemo(() => ({ theme, setTheme, storageError }), [theme, setTheme, storageError]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
 const userInitials = (name = 'U') => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 const dateLabel = (date) => date ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(date)) : 'Just now';
 const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -141,8 +163,71 @@ function AuthPage({ register = false }) {
   </AuthShell>;
 }
 
+function ThemePicker() {
+  const { theme, setTheme, storageError } = useWorkspaceTheme();
+  const [open, setOpen] = useState(false);
+  const pickerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const activeTheme = WORKSPACE_THEMES.find((option) => option.id === theme) || WORKSPACE_THEMES[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    const closeOnOutside = (event) => { if (!pickerRef.current?.contains(event.target)) setOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('pointerdown', closeOnOutside);
+    };
+  }, [open]);
+
+  return <div className="theme-picker" ref={pickerRef}>
+    <button
+      type="button"
+      ref={triggerRef}
+      className="theme-picker-trigger"
+      aria-haspopup="true"
+      aria-expanded={open}
+      aria-controls={open ? 'workspace-theme-options' : undefined}
+      aria-label={`Appearance: ${activeTheme.name}`}
+      onClick={() => setOpen((value) => !value)}
+    >
+      <Palette size={15} /><span>Appearance</span><ChevronDown size={13} />
+    </button>
+    {open && <div className="theme-picker-panel" id="workspace-theme-options">
+      <div className="theme-picker-heading"><strong>Workspace theme</strong><span>Choose a look for your space</span></div>
+      <div className="theme-picker-options" role="group" aria-label="Workspace themes">
+        {WORKSPACE_THEMES.map((option) => <button
+          type="button"
+          key={option.id}
+          className="theme-option"
+          aria-pressed={theme === option.id}
+          onClick={() => {
+            if (setTheme(option.id)) {
+              setOpen(false);
+              triggerRef.current?.focus();
+            }
+          }}
+        >
+          <span className={`theme-swatch theme-swatch-${option.id}`} aria-hidden="true"><i /><i /><i /></span>
+          <span className="theme-option-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
+          {theme === option.id && <Check className="theme-option-check" size={16} aria-hidden="true" />}
+        </button>)}
+      </div>
+      {storageError && <p className="theme-storage-error" role="status">{storageError}</p>}
+    </div>}
+  </div>;
+}
+
 function AppFrame({ children }) {
   const { session, signOut } = useSession();
+  const { theme } = useWorkspaceTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const topbarRef = useRef(null);
@@ -164,12 +249,14 @@ function AppFrame({ children }) {
     };
   }, [mobileOpen]);
 
-  return <div className="app-shell">
+  return <div className="app-shell" data-theme={theme || DEFAULT_WORKSPACE_THEME}>
     <header ref={topbarRef} className="topbar glass-panel">
       <Brand />
       <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className="nav-link active" onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Workspace</Link>
         <span className="nav-divider" />
+        <ThemePicker />
+        <span className="nav-divider theme-nav-divider" />
         <span className="nav-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local demo · saved in this browser' : 'All systems calm'}</span>
       </nav>
       <div className="topbar-actions">
@@ -1333,7 +1420,7 @@ function PrivacyPage() {
 }
 
 export default function App() {
-  return <AuthContext><NativeBridge /><Routes>
+  return <ThemeProvider><AuthContext><NativeBridge /><Routes>
     <Route path="/" element={<LandingPage />} />
     <Route path="/privacy" element={<PrivacyPage />} />
     <Route path="/login" element={<AuthPage />} />
@@ -1341,5 +1428,5 @@ export default function App() {
     <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
     <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
     <Route path="*" element={<NotFound />} />
-  </Routes></AuthContext>;
+  </Routes></AuthContext></ThemeProvider>;
 }
