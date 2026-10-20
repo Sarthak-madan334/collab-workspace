@@ -9,6 +9,7 @@ import {
   Palette, X, Zap,
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
+import { validateAuthFields } from './auth-validation.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
@@ -101,7 +102,7 @@ const GlassButton = forwardRef(function GlassButton({ children, className = '', 
   return <button ref={ref} className={`button button-${variant} ${className}`} {...props}>{children}</button>;
 });
 
-function AuthShell({ children, mode }) {
+function AuthShell({ children }) {
   return <main className="auth-shell">
     <div className="auth-top"><Brand /><span className="auth-context"><span className="status-dot" /> A quieter way to work together</span></div>
     <div className="auth-content">
@@ -109,6 +110,12 @@ function AuthShell({ children, mode }) {
         <div className="eyebrow"><span className="eyebrow-line" /> SHARED SPACE, CLEAR THINKING</div>
         <h1>Good ideas<br />move <span>together.</span></h1>
         <p>A focused workspace for the notes, plans, and small moments that make a team click.</p>
+        <div className="auth-highlights">
+          <div className="auth-highlight"><span className="highlight-icon"><Users size={14} /></span><span><strong>Shared spaces for real work</strong><small>Bring your team into one calm workspace.</small></span></div>
+          <div className="auth-highlight"><span className="highlight-icon"><FileClock size={14} /></span><span><strong>Less noise, more progress</strong><small>Keep plans and decisions easy to find.</small></span></div>
+          <div className="auth-highlight"><span className="highlight-icon"><Zap size={14} /></span><span><strong>Built for teams that think out loud</strong><small>Turn good conversations into clear next steps.</small></span></div>
+          <div className="auth-highlight"><span className="highlight-icon"><LockKeyhole size={14} /></span><span><strong>Your ideas stay yours</strong><small>Private rooms for the people you invite.</small></span></div>
+        </div>
         <div className="auth-visual" aria-hidden="true">
           <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
           <div className="visual-card visual-card-back"><span className="mini-label">ROOM / 01</span><div className="visual-lines"><i /><i /><i /></div><span className="visual-check"><Check size={13} /></span></div>
@@ -123,41 +130,81 @@ function AuthShell({ children, mode }) {
   </main>;
 }
 
+function ProviderButtons() {
+  return <div className="auth-providers" role="group" aria-label="Other sign-in options">
+    <button className="provider-button" type="button" disabled aria-label="Google sign-in coming soon">
+      <span className="provider-google-mark" aria-hidden="true">G</span><span>Google</span><small>Coming soon</small>
+    </button>
+    <button className="provider-button" type="button" disabled aria-label="Apple sign-in coming soon">
+      <svg className="provider-apple-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 1.5c.1 1.2-.4 2.4-1.2 3.2-.8 1-2.2 1.8-3.7 1.7-.2-1.2.4-2.4 1.2-3.3.9-1 2.3-1.7 3.7-1.6ZM20.5 16.9c-.6 1.3-.9 1.9-1.6 3-1 1.5-2.5 3.5-4.2 3.5-1.6 0-2-.9-4.2-.9s-2.6 1-4.2.9c-1.8 0-3.2-1.8-4.2-3.3-2.9-4.3-3.2-9.5-1.4-12.2 1.3-1.9 3.2-3.1 5.1-3.1s3.1 1 4.7 1c1.5 0 2.4-1 4.6-1 1.7 0 3.4.9 4.7 2.4-4.1 2.3-3.5 8.1.7 9.7Z" /></svg><span>Apple</span><small>Coming soon</small>
+    </button>
+  </div>;
+}
+
 function AuthPage({ register = false }) {
   const { session, setSession } = useSession();
   const navigate = useNavigate();
+  const nameRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const submitLock = useRef(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   if (session) return <Navigate to="/dashboard" replace />;
 
   const submit = async (event) => {
-    event.preventDefault(); setBusy(true); setError('');
+    event.preventDefault();
+    if (submitLock.current) return;
+    const validationErrors = validateAuthFields({ register, name, email, password });
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length) {
+      setError('');
+      const firstInvalid = Object.keys(validationErrors)[0];
+      ({ name: nameRef, email: emailRef, password: passwordRef }[firstInvalid]).current?.focus();
+      return;
+    }
+    submitLock.current = true;
+    setBusy(true);
+    setError('');
     try {
       const result = register ? await authApi.register({ name: name.trim(), email: email.trim(), password }) : await authApi.login({ email: email.trim(), password });
       setSession({ user: result.user, token: result.token, expiresAt: result.expiresAt });
       navigate('/dashboard', { replace: true });
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'We could not complete your request. Please try again.');
+    } finally {
+      submitLock.current = false;
+      setBusy(false);
+    }
   };
 
-  return <AuthShell mode={register ? 'register' : 'login'}>
+  const updateField = (field, setValue) => (event) => {
+    setValue(event.target.value);
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setError('');
+  };
+
+  return <AuthShell>
     <div className="auth-card glass-panel">
       <div className="card-kicker"><span className="kicker-icon"><Fingerprint size={15} /></span> YOUR WORKSPACE, YOUR PEOPLE</div>
-      <h2>{register ? 'Make room.' : 'Welcome back.'}</h2>
-      <p className="auth-card-sub">{register ? 'Start a shared space for your team.' : 'Pick up where your team left off.'}</p>
-      <form onSubmit={submit} className="form-stack">
-        {register && <label className="field-label">Your name<div className="input-wrap"><Users size={16} /><input autoComplete="name" required maxLength={50} value={name} onChange={(e) => setName(e.target.value)} placeholder="How should we call you?" /></div></label>}
-        <label className="field-label">Email address<div className="input-wrap"><span className="at-icon">@</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourteam.com" /></div></label>
-        <div className="field-label"><label htmlFor={register ? 'register-password' : 'login-password'}>Password</label><div className="input-wrap"><KeyRound size={16} /><input id={register ? 'register-password' : 'login-password'} type={passwordVisible ? 'text' : 'password'} autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={register ? 'At least 12 characters' : 'Enter your password'} /><button className="password-toggle" type="button" aria-label={passwordVisible ? 'Hide password' : 'Show password'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((visible) => !visible)}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></div>
+      <h2>{register ? 'Create your account' : 'Welcome back'}</h2>
+      <p className="auth-card-sub">{register ? 'Make a little room for your team’s next good idea.' : 'Sign in to pick up where your team left off.'}</p>
+      <ProviderButtons />
+      <div className="auth-divider"><span>Or continue with email</span></div>
+      <form onSubmit={submit} className="form-stack" noValidate aria-busy={busy}>
+        {register && <div className="field-label"><label htmlFor="register-name">Full name</label><div className={`input-wrap${fieldErrors.name ? ' input-wrap-invalid' : ''}`}><Users size={16} aria-hidden="true" /><input ref={nameRef} id="register-name" autoComplete="name" required maxLength={50} value={name} onChange={updateField('name', setName)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'register-name-error' : undefined} placeholder="How should we call you?" /></div>{fieldErrors.name && <span className="field-error" id="register-name-error">{fieldErrors.name}</span>}</div>}
+        <div className="field-label"><label htmlFor={register ? 'register-email' : 'login-email'}>Email address</label><div className={`input-wrap${fieldErrors.email ? ' input-wrap-invalid' : ''}`}><span className="at-icon" aria-hidden="true">@</span><input ref={emailRef} id={register ? 'register-email' : 'login-email'} type="email" autoComplete="email" required value={email} onChange={updateField('email', setEmail)} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? `${register ? 'register' : 'login'}-email-error` : undefined} placeholder="you@yourteam.com" /></div>{fieldErrors.email && <span className="field-error" id={`${register ? 'register' : 'login'}-email-error`}>{fieldErrors.email}</span>}</div>
+        <div className="field-label"><label htmlFor={register ? 'register-password' : 'login-password'}>Password</label><div className={`input-wrap${fieldErrors.password ? ' input-wrap-invalid' : ''}`}><KeyRound size={16} aria-hidden="true" /><input ref={passwordRef} id={register ? 'register-password' : 'login-password'} type={passwordVisible ? 'text' : 'password'} autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} value={password} onChange={updateField('password', setPassword)} aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? `${register ? 'register' : 'login'}-password-error` : undefined} placeholder={register ? 'At least 12 characters' : 'Enter your password'} /><button className="password-toggle" type="button" aria-label={passwordVisible ? 'Hide password' : 'Show password'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((visible) => !visible)}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{fieldErrors.password && <span className="field-error" id={`${register ? 'register' : 'login'}-password-error`}>{fieldErrors.password}</span>}</div>
         {error && <div className="form-error" role="alert">{error}</div>}
-        <button className="button button-primary auth-submit" disabled={busy}>{busy ? <ButtonLoader label={register ? 'Creating your space…' : 'Signing you in…'} /> : <>{register ? 'Create your account' : 'Sign in to Synkro'} <ArrowRight size={16} /></>}</button>
+        <button className="button button-primary auth-submit" disabled={busy}>{busy ? <ButtonLoader label={register ? 'Creating your account…' : 'Signing you in…'} /> : <>{register ? 'Create your account' : 'Sign In'} <ArrowRight size={16} /></>}</button>
       </form>
-      {!register && DEMO_MODE && <div className="demo-access"><div><span className="demo-access-tag">LOCAL DEMO</span><span>Preview without a backend</span></div><div className="demo-credentials"><code>{DEMO_EMAIL}</code><code>{DEMO_PASSWORD}</code></div><button type="button" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setError(''); }}>Fill demo sign-in <ArrowDown size={13} /></button><small>Demo data stays in this browser. No server connection is used.</small></div>}
-      <div className="auth-switch">{register ? 'Already have a space?' : 'New to Synkro?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'} <ArrowUpRight size={13} /></Link></div>
+      {!register && DEMO_MODE && <div className="demo-access"><div><span className="demo-access-tag">LOCAL DEMO</span><span>Preview without a backend</span></div><div className="demo-credentials"><code>{DEMO_EMAIL}</code><code>{DEMO_PASSWORD}</code></div><button type="button" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setFieldErrors({}); setError(''); }}>Fill demo sign-in <ArrowDown size={13} /></button><small>Demo data stays in this browser. No server connection is used.</small></div>}
+      <div className="auth-switch">{register ? 'Already have an account?' : "Don't have an account?"} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Sign up'} <ArrowUpRight size={13} /></Link></div>
       <div className="auth-secure"><ShieldCheck size={14} /> Your notes belong to your team. Sign in again after a page reload.</div>
     </div>
     <div className="form-below"><span>Private rooms</span><i /><span>Live presence</span><i /><span>Revision history</span></div>
