@@ -201,7 +201,7 @@ function ThemePicker() {
     >
       <Palette size={15} /><span>Appearance</span><ChevronDown size={13} />
     </button>
-    {open && <div className="theme-picker-panel" id="workspace-theme-options">
+    {open && <div className="theme-picker-panel glass-panel" id="workspace-theme-options">
       <div className="theme-picker-heading"><strong>Workspace theme</strong><span>Choose a look for your space</span></div>
       <div className="theme-picker-options" role="group" aria-label="Workspace themes">
         {WORKSPACE_THEMES.map((option) => <button
@@ -231,9 +231,49 @@ function AppFrame({ children }) {
   const { theme } = useWorkspaceTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const shellRef = useRef(null);
   const topbarRef = useRef(null);
   const navigate = useNavigate();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
+
+    const surfaceSelector = '.glass-panel, .button, .guide-replay-button';
+    let activeSurface = null;
+    const resetReflection = (surface) => {
+      surface.style.setProperty('--glass-pointer-x', '50%');
+      surface.style.setProperty('--glass-pointer-y', '35%');
+    };
+    const trackPointer = (event) => {
+      if (event.pointerType !== 'mouse') return;
+      const surface = event.target.closest?.(surfaceSelector);
+      if (!surface || !shell.contains(surface)) {
+        if (activeSurface) resetReflection(activeSurface);
+        activeSurface = null;
+        return;
+      }
+      if (activeSurface && activeSurface !== surface) resetReflection(activeSurface);
+      const bounds = surface.getBoundingClientRect();
+      surface.style.setProperty('--glass-pointer-x', `${((event.clientX - bounds.left) / bounds.width) * 100}%`);
+      surface.style.setProperty('--glass-pointer-y', `${((event.clientY - bounds.top) / bounds.height) * 100}%`);
+      activeSurface = surface;
+    };
+    const resetOnLeave = (event) => {
+      const surface = event.target.closest?.(surfaceSelector);
+      if (!surface || surface.contains(event.relatedTarget)) return;
+      resetReflection(surface);
+      if (activeSurface === surface) activeSurface = null;
+    };
+
+    shell.addEventListener('pointermove', trackPointer);
+    shell.addEventListener('pointerout', resetOnLeave);
+    return () => {
+      shell.removeEventListener('pointermove', trackPointer);
+      shell.removeEventListener('pointerout', resetOnLeave);
+    };
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -250,10 +290,10 @@ function AppFrame({ children }) {
     };
   }, [mobileOpen]);
 
-  return <div className="app-shell" data-theme={theme || DEFAULT_WORKSPACE_THEME}>
+  return <div ref={shellRef} className="app-shell" data-theme={theme || DEFAULT_WORKSPACE_THEME}>
     <header ref={topbarRef} className="topbar glass-panel">
       <Brand />
-      <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
+      <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open glass-panel' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className="nav-link active" onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Workspace</Link>
         <span className="nav-divider" />
         <ThemePicker />
@@ -522,11 +562,9 @@ function Dashboard() {
     finally { setBusyAction(''); }
   };
 
-  const greetingName = (session?.user?.name || 'there').split(' ')[0];
   return <>
     <section className="dashboard-hero">
       <div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> YOUR TEAM, IN ONE PLACE</div><h1>Make space for<br /><span>good work.</span></h1><p>Shared notes, live thinking, and a little more room to do your best work.</p></div>
-      <div className="hero-side glass-panel"><div className="hero-side-icon"><Sparkles size={17} /></div><div><span className="hero-side-label">A GOOD DAY TO MAKE THINGS</span><p>Hey, {greetingName}.<br />Your team is just a thought away.</p></div><div className="hero-side-mark">✳</div></div>
     </section>
 
     <section className="workspace-section">

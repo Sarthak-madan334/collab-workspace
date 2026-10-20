@@ -419,7 +419,7 @@
 }
 .app-shell[data-theme="default-dark"] {
   --theme-background-color: #08090b;
-  --theme-background: radial-gradient(ellipse at 17% 0%, rgba(151, 176, 126, .09), transparent 38%), #08090b;
+  --theme-background: radial-gradient(ellipse at 67% 38%, rgba(52, 232, 154, .065), transparent 40%), radial-gradient(ellipse at 12% 86%, rgba(10, 255, 127, .035), transparent 38%), radial-gradient(ellipse at 17% 0%, rgba(151, 176, 126, .09), transparent 38%), #08090b;
   --theme-glass: rgba(33, 38, 38, .82);
   --theme-glass-strong: rgba(16, 19, 20, .94);
   --theme-topbar: linear-gradient(135deg, rgba(31, 35, 34, .92), rgba(12, 15, 16, .94));
@@ -729,4 +729,121 @@
 }
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 900px) {
   .app-shell[data-theme] .theme-picker-panel { position: static; width: auto; max-height: min(48svh, 270px); margin: 4px 0; }
+}
+
+@property --glass-pointer-x {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 50%;
+}
+@property --glass-pointer-y {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 35%;
+}
+@property --glass-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.app-shell[data-theme] {
+  --glass-edge-rgb: 52, 232, 154;
+  --glass-neon-rgb: 10, 255, 127;
+}
+.app-shell[data-theme]:not([data-theme="default-dark"]) {
+  --glass-edge-rgb: var(--theme-accent-rgb);
+  --glass-neon-rgb: var(--theme-accent-rgb);
+}
+.app-shell[data-theme="light"] { --glass-edge-rgb: 53, 94, 234; --glass-neon-rgb: 53, 94, 234; }
+.app-shell :is(.glass-panel, .button, .guide-replay-button) {
+  position: relative;
+  isolation: isolate;
+  --glass-pointer-x: 50%;
+  --glass-pointer-y: 35%;
+  --glass-delay: 0s;
+}
+.app-shell :is(.topbar, .profile-menu, .theme-picker-panel, .history-drawer, .modal-card, .toast, .dashboard-onboarding-tooltip) { --glass-delay: -7s; }
+.app-shell .topbar { position: sticky; }
+.app-shell .profile-menu, .app-shell .theme-picker-panel { position: absolute; }
+.app-shell[data-theme] .main-nav.nav-open { position: absolute; }
+.app-shell .history-drawer, .app-shell .toast, .app-shell .dashboard-onboarding-tooltip { position: fixed; }
+.app-shell .modal-card { position: relative; }
+.app-shell .glass-panel::before,
+.app-shell .button::before,
+.app-shell .guide-replay-button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  display: block;
+  border-radius: inherit;
+  content: '';
+  background:
+    radial-gradient(ellipse at var(--glass-pointer-x) var(--glass-pointer-y), rgba(var(--glass-edge-rgb), .15), transparent 58%),
+    linear-gradient(112deg, transparent 34%, rgba(255, 255, 255, .025) 46%, rgba(var(--glass-neon-rgb), .065) 51%, transparent 66%);
+  background-size: 100% 100%, 230% 190%;
+  background-position: 50% 50%, 0% 52%;
+  background-repeat: no-repeat;
+  opacity: .58;
+  pointer-events: none;
+  animation: glass-surface-breathe 17s ease-in-out var(--glass-delay) infinite alternate;
+}
+.app-shell .glass-panel::after,
+.app-shell .button::after,
+.app-shell .guide-replay-button::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: block;
+  padding: 1px;
+  border-radius: inherit;
+  content: '';
+  background: conic-gradient(from var(--glass-border-angle), transparent 0deg 274deg, rgba(var(--glass-edge-rgb), .08) 306deg, rgba(var(--glass-neon-rgb), .48) 322deg, rgba(199, 243, 107, .28) 333deg, transparent 350deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: .32;
+  pointer-events: none;
+  animation: glass-edge-travel 25s linear var(--glass-delay) infinite;
+}
+.app-shell :is(.glass-panel, .button, .guide-replay-button):hover::after,
+.app-shell :is(.glass-panel, .button, .guide-replay-button):focus-within::after { opacity: .78; }
+.app-shell :is(.glass-panel, .button, .guide-replay-button) { transition: --glass-pointer-x .48s ease, --glass-pointer-y .48s ease; }
+.app-shell .room-card {
+  transition: transform .24s ease, border-color .24s ease, background .24s ease, box-shadow .24s ease, --glass-pointer-x .48s ease, --glass-pointer-y .48s ease;
+}
+.app-shell .button {
+  transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease, --glass-pointer-x .48s ease, --glass-pointer-y .48s ease;
+}
+.app-shell .guide-replay-button {
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease, --glass-pointer-x .48s ease, --glass-pointer-y .48s ease;
+}
+.app-shell .room-grid > .room-card:nth-child(3n + 1) { --glass-delay: -3s; }
+.app-shell .room-grid > .room-card:nth-child(3n + 2) { --glass-delay: -11s; }
+.app-shell .room-grid > .room-card:nth-child(3n) { --glass-delay: -18s; }
+.app-shell .room-card:hover, .app-shell .room-card:focus-visible { border-color: rgba(var(--glass-edge-rgb), .42); }
+.app-shell :is(.button, .guide-replay-button):active:not(:disabled) { transform: translateY(0) scale(.985); }
+.app-shell .room-card:active { transform: translateY(-1px) scale(.995); }
+.app-shell[data-theme="default-dark"] :is(.topbar, .hero-side, .room-card, .empty-state, .bottom-note, .editor-main, .aside-card, .manage-invite, .history-drawer, .modal-card, .profile-menu, .theme-picker-panel) {
+  box-shadow: 0 22px 55px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .085), 0 0 32px rgba(52, 232, 154, .025);
+}
+@keyframes glass-surface-breathe {
+  0% { background-position: 50% 50%, 0% 52%; opacity: .34; }
+  52% { opacity: .56; }
+  100% { background-position: 50% 50%, 100% 48%; opacity: .4; }
+}
+@keyframes glass-edge-travel { to { --glass-border-angle: 360deg; } }
+@media (max-width: 760px) {
+  .app-shell .theme-picker-panel { position: static; }
+  .app-shell :is(.glass-panel, .button, .guide-replay-button)::before { opacity: .32; animation-duration: 24s; }
+  .app-shell :is(.glass-panel, .button, .guide-replay-button)::after { opacity: .24; animation-duration: 32s; }
+  .app-shell :is(.glass-panel, .button) { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+}
+@media (hover: none) {
+  .app-shell :is(.glass-panel, .button, .guide-replay-button)::before { opacity: .28; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell :is(.glass-panel, .button, .guide-replay-button)::before,
+  .app-shell :is(.glass-panel, .button, .guide-replay-button)::after { animation: none !important; }
+  .app-shell :is(.glass-panel, .button, .guide-replay-button) { transition: none !important; }
 }
