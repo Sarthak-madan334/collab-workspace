@@ -8,6 +8,7 @@ export async function connectDatabase(config) {
     await db.command({ ping: 1 });
     await Promise.all([
       db.collection('users').createIndex({ emailNormalized: 1 }, { unique: true }),
+      db.collection('users').createIndex({ googleSub: 1 }, { unique: true, partialFilterExpression: { googleSub: { $type: 'string' } } }),
       db.collection('sessions').createIndex({ tokenHash: 1 }, { unique: true }),
       db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
       db.collection('sessions').createIndex({ userId: 1 }),

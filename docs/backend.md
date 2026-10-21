@@ -10,7 +10,7 @@ The implementation lives in `server/src/`: `app.js` owns HTTP routes, `socket.js
 
 | Service | Responsibilities |
 | --- | --- |
-| Auth | Registration, password verification, session issuance/revocation/expiry |
+| Auth | Registration, password and optional verified Google ID-token sign-in, session issuance/revocation/expiry |
 | Rooms | Atomic room creation, owner membership, invite redemption/rotation |
 | Notes | Content validation, room mutation queue, transaction, idempotency |
 | History | Paginated immutable versions, preview, owner-authorized restore |

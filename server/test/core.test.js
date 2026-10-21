@@ -57,6 +57,9 @@ test('production config requires an exact HTTPS frontend origin', () => {
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('https://example.com'), true);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('https://localhost'), true);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).origins.has('http://localhost'), false);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).googleClientId, null);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: '123-test.apps.googleusercontent.com' }).googleClientId, '123-test.apps.googleusercontent.com');
+  assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: 'not-a-google-client' }), /GOOGLE_CLIENT_ID/);
 });
 
 test('rate-limit storage stays bounded under distinct keys', () => {

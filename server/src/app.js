@@ -65,6 +65,10 @@ export function createApp(config, { db, auth, rooms, notes, limiter, ready = () 
     limiter.check(`auth:${request.ip}`, 10, 15 * 60 * 1000);
     return auth.login(request.body);
   }));
+  app.post('/api/v1/auth/google', route(async (request) => {
+    limiter.check(`auth:${request.ip}`, 10, 15 * 60 * 1000);
+    return auth.loginGoogle(request.body);
+  }));
   app.use('/api/v1', authenticated);
   app.get('/api/v1/auth/me', route((request) => auth.me(request.token)));
   app.post('/api/v1/auth/logout', route((request) => auth.logout(request.token)));

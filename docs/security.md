@@ -4,6 +4,8 @@
 
 The implemented core uses opaque random bearer sessions stored server-side in Atlas. It generates 32 random bytes with Node.js `crypto`, returns the token once, and stores only its SHA-256 hash. Session lifetime defaults to 8 hours. Expiry/revocation is checked on every protected request and event; TTL indexes only clean up records.
 
+Google sign-in is an optional backend flow. When `GOOGLE_CLIENT_ID` is set, `/api/v1/auth/google` verifies a Google Identity Services ID token for that audience, requires a verified email, and identifies the user by Google's stable `sub` claim. It then issues the same Synkro session. An existing password account with the same email is not automatically linked. The Google button needs a separate frontend integration; see [Google sign-in setup](google-auth.md).
+
 Store tokens in browser memory, not localStorage, URLs, or logs. Page reload requires sign-in; persistent login/refresh tokens are deferred. This avoids depending on cross-site cookies between Vercel and Render. If persistent login is later introduced, document its cookie, CSRF, refresh, and browser compatibility design before changing this contract.
 
 Logout revokes the session, disconnects associated sockets, and clears frontend state. On expiry, disconnect idle sockets as well as rejecting new actions. Track socket IDs by session for revocation.

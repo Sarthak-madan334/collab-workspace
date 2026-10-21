@@ -74,6 +74,7 @@ Preview deployments need explicit origin approval and preferably a separate stag
 - Nonmembers, invalid origins, expired sessions, and invalid payloads are rejected.
 - Logs and frontend assets contain no secrets or note bodies.
 - Account registration and sign-in work against Atlas; a browser refresh currently requires signing in again because the session token is kept only in memory.
+- If enabling Google sign-in, configure the backend and web client as described in [Google sign-in setup](google-auth.md); the Google frontend button is not connected yet.
 - Decide whether email verification, password reset, abuse reporting, backups, and storage/room quotas are required for the intended public launch. They are not implemented by the current application.
 - Record deployment URLs, commit, plan/region, and acceptance results in a release record.
 

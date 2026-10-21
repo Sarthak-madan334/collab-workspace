@@ -6,6 +6,7 @@ export function loadConfig(env = process.env) {
   const port = Number(env.PORT || 4000);
   const sessionHours = Number(env.SESSION_TTL_HOURS || 8);
   const trustProxyHops = Number(env.TRUST_PROXY_HOPS || 0);
+  const googleClientId = env.GOOGLE_CLIENT_ID?.trim() || null;
   const origins = (env.CLIENT_ORIGINS ?? (production ? '' : 'http://localhost:5173'))
     .split(',').map((origin) => origin.trim()).filter(Boolean);
 
@@ -14,6 +15,9 @@ export function loadConfig(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid port');
   if (!Number.isInteger(sessionHours) || sessionHours < 1 || sessionHours > 168) throw new Error('SESSION_TTL_HOURS must be 1–168');
   if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0 || trustProxyHops > 2) throw new Error('TRUST_PROXY_HOPS must be 0–2');
+  if (googleClientId && (googleClientId.length > 255 || !googleClientId.endsWith('.apps.googleusercontent.com') || /\s/.test(googleClientId))) {
+    throw new Error('GOOGLE_CLIENT_ID must be a Google web client ID');
+  }
   if (!origins.length) throw new Error('CLIENT_ORIGINS must contain an exact frontend origin');
   for (const origin of origins) {
     let url;
@@ -27,6 +31,6 @@ export function loadConfig(env = process.env) {
     // Capacitor serves bundled Android assets from this fixed HTTPS origin.
     // Keep the web origins explicit; the native app still needs a valid bearer token.
     origins: new Set([...origins, 'https://localhost']), sessionTtlMs: sessionHours * 60 * 60 * 1000,
-    trustProxyHops, logLevel: env.LOG_LEVEL || 'info',
+    trustProxyHops, logLevel: env.LOG_LEVEL || 'info', googleClientId,
   };
 }
