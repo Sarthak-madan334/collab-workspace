@@ -1,6 +1,6 @@
 # Google sign-in setup
 
-Synkro accepts a Google Identity Services ID token at `POST /api/v1/auth/google` and verifies it on the Render backend before issuing the same opaque Synkro session used by email/password sign-in. The backend does not accept a Google access token or trust a client-supplied email. The visible Google button is still disabled; a separate frontend integration must obtain the ID token and call this endpoint.
+Synkro accepts a Google Identity Services ID token at `POST /api/v1/auth/google` and verifies it on the Render backend before issuing the same opaque Synkro session used by email/password sign-in. The backend does not accept a Google access token or trust a client-supplied email. The sign-in and registration pages render Google's official button when the frontend has a web client ID.
 
 ## 1. Create a Google web client
 
@@ -18,9 +18,11 @@ On the Render web service, set `GOOGLE_CLIENT_ID` to that exact web client ID an
 
 The backend checks Google's signature, issuer, expiry, audience, stable `sub`, and verified email through `google-auth-library`. A first-time Google identity creates a Synkro user with `googleSub` and a server-side session. Subsequent Google sign-ins use the same user. A password account with the same email returns `409 ACCOUNT_LINK_REQUIRED`; Synkro deliberately does not merge accounts based only on an email match. Account linking needs a separate authenticated flow.
 
-## 3. Connect the frontend
+## 3. Configure the frontend
 
-The current Google button in `frontend/src/App.jsx` is disabled and marked **Coming soon**. To make it functional, integrate the official Google Identity Services client, use the web client ID to obtain its `credential` ID token, and send JSON `{ "credential": "<Google ID token>" }` to `POST https://collab-workspace-6b8e.onrender.com/api/v1/auth/google`. Treat the returned `{ user, token, expiresAt }` exactly like the existing `/auth/login` response. Add a public `VITE_GOOGLE_CLIENT_ID` to Vercel when implementing that frontend step, then redeploy the frontend. The backend must still verify every token; frontend configuration alone is insufficient.
+In the Vercel frontend project, add `VITE_GOOGLE_CLIENT_ID` with the **same** web client ID used for Render's `GOOGLE_CLIENT_ID`. Apply it to Production (and Preview if you use a preview domain), then redeploy the frontend. For local Vite development, put `VITE_GOOGLE_CLIENT_ID=<client ID>` in `frontend/.env.local` and restart Vite. The client ID is public. Without it, the Google button says **Not configured**; email/password sign-in still works.
+
+The frontend loads [Google Identity Services](https://developers.google.com/identity/gsi/web/guides/display-button), obtains the callback's `credential` ID token, and posts JSON `{ "credential": "<Google ID token>" }` to the existing `/auth/google` endpoint. It uses the returned `{ user, token, expiresAt }` as a normal Synkro session. The backend must still verify every token; frontend configuration alone is insufficient.
 
 Do not send a Google access token, raw profile fields, or a client secret to this endpoint. Do not log ID tokens. If using Google Identity Services' JavaScript callback, it does not require a redirect URI; choose one integration mode and configure Google Cloud for that mode.
 

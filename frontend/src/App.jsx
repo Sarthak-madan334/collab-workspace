@@ -130,11 +130,95 @@ function AuthShell({ children }) {
   </main>;
 }
 
-function ProviderButtons() {
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+let googleScriptPromise;
+
+function loadGoogleIdentity() {
+  if (window.google?.accounts?.id) return Promise.resolve(window.google);
+  if (!googleScriptPromise) {
+    googleScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.onload = () => window.google?.accounts?.id
+        ? resolve(window.google)
+        : reject(new Error('Google sign-in could not start. Please try again.'));
+      script.onerror = () => {
+        script.remove();
+        reject(new Error('Google sign-in could not load. Check your connection and try again.'));
+      };
+      document.head.appendChild(script);
+    }).catch((error) => {
+      googleScriptPromise = undefined;
+      throw error;
+    });
+  }
+  return googleScriptPromise;
+}
+
+function GoogleButton({ onCredential, onError, busy }) {
+  const hostRef = useRef(null);
+  const callbackRef = useRef(onCredential);
+  const errorRef = useRef(onError);
+  const [loadError, setLoadError] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  callbackRef.current = onCredential;
+  errorRef.current = onError;
+
+  useEffect(() => {
+    if (!googleClientId) return undefined;
+    let active = true;
+    let observer;
+    loadGoogleIdentity().then((google) => {
+      if (!active || !hostRef.current) return;
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => {
+          if (active && credential) callbackRef.current(credential);
+        },
+      });
+      const render = () => {
+        const host = hostRef.current;
+        if (!host) return;
+        host.replaceChildren();
+        google.accounts.id.renderButton(host, {
+          type: 'standard', theme: 'outline_dark', size: 'large',
+          shape: 'pill', text: 'continue_with',
+          width: Math.max(120, Math.min(400, Math.floor(host.clientWidth))),
+        });
+      };
+      render();
+      setLoaded(true);
+      let previousWidth = hostRef.current.clientWidth;
+      observer = new ResizeObserver(([entry]) => {
+        const width = Math.floor(entry.contentRect.width);
+        if (width > 0 && width !== previousWidth) {
+          previousWidth = width;
+          render();
+        }
+      });
+      observer.observe(hostRef.current);
+    }).catch((error) => {
+      if (active) {
+        setLoadError(error.message);
+        errorRef.current(error.message);
+      }
+    });
+    return () => {
+      active = false;
+      observer?.disconnect();
+    };
+  }, [attempt]);
+
+  if (!googleClientId) return <button className="provider-button" type="button" disabled title="Set VITE_GOOGLE_CLIENT_ID to enable Google sign-in"><span className="provider-google-mark" aria-hidden="true">G</span><span>Google</span><small>Not configured</small></button>;
+  if (loadError) return <button className="provider-button provider-button-error" type="button" onClick={() => { onError(''); setLoaded(false); setLoadError(''); setAttempt((value) => value + 1); }}><span className="provider-google-mark" aria-hidden="true">G</span><span>Retry Google</span></button>;
+  return <div className={`provider-google-slot${busy ? ' provider-google-busy' : ''}`} aria-busy={busy}><div className="provider-google-host" ref={hostRef} />{!loaded && <span className="provider-google-loading" role="status">Loading Google…</span>}</div>;
+}
+
+function ProviderButtons({ onGoogleCredential, onGoogleError, busy }) {
   return <div className="auth-providers" role="group" aria-label="Other sign-in options">
-    <button className="provider-button" type="button" disabled aria-label="Google sign-in coming soon">
-      <span className="provider-google-mark" aria-hidden="true">G</span><span>Google</span><small>Coming soon</small>
-    </button>
+    <GoogleButton onCredential={onGoogleCredential} onError={onGoogleError} busy={busy} />
     <button className="provider-button" type="button" disabled aria-label="Apple sign-in coming soon">
       <svg className="provider-apple-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 1.5c.1 1.2-.4 2.4-1.2 3.2-.8 1-2.2 1.8-3.7 1.7-.2-1.2.4-2.4 1.2-3.3.9-1 2.3-1.7 3.7-1.6ZM20.5 16.9c-.6 1.3-.9 1.9-1.6 3-1 1.5-2.5 3.5-4.2 3.5-1.6 0-2-.9-4.2-.9s-2.6 1-4.2.9c-1.8 0-3.2-1.8-4.2-3.3-2.9-4.3-3.2-9.5-1.4-12.2 1.3-1.9 3.2-3.1 5.1-3.1s3.1 1 4.7 1c1.5 0 2.4-1 4.6-1 1.7 0 3.4.9 4.7 2.4-4.1 2.3-3.5 8.1.7 9.7Z" /></svg><span>Apple</span><small>Coming soon</small>
     </button>
@@ -156,6 +240,23 @@ function AuthPage({ register = false }) {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   if (session) return <Navigate to="/dashboard" replace />;
+
+  const signInWithGoogle = async (credential) => {
+    if (submitLock.current) return;
+    submitLock.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await authApi.google(credential);
+      setSession({ user: result.user, token: result.token, expiresAt: result.expiresAt });
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed. Please try again.');
+    } finally {
+      submitLock.current = false;
+      setBusy(false);
+    }
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -194,7 +295,7 @@ function AuthPage({ register = false }) {
       <div className="card-kicker"><span className="kicker-icon"><Fingerprint size={15} /></span> YOUR WORKSPACE, YOUR PEOPLE</div>
       <h2>{register ? 'Create your account' : 'Welcome back'}</h2>
       <p className="auth-card-sub">{register ? 'Make a little room for your team’s next good idea.' : 'Sign in to pick up where your team left off.'}</p>
-      <ProviderButtons />
+      <ProviderButtons onGoogleCredential={signInWithGoogle} onGoogleError={setError} busy={busy} />
       <div className="auth-divider"><span>Or continue with email</span></div>
       <form onSubmit={submit} className="form-stack" noValidate aria-busy={busy}>
         {register && <div className="field-label"><label htmlFor="register-name">Full name</label><div className={`input-wrap${fieldErrors.name ? ' input-wrap-invalid' : ''}`}><Users size={16} aria-hidden="true" /><input ref={nameRef} id="register-name" autoComplete="name" required maxLength={50} value={name} onChange={updateField('name', setName)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'register-name-error' : undefined} placeholder="How should we call you?" /></div>{fieldErrors.name && <span className="field-error" id="register-name-error">{fieldErrors.name}</span>}</div>}
