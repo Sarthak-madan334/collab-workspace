@@ -1619,8 +1619,11 @@ html:has(.landing-page), body:has(.landing-page) { overflow-x: clip; }
 .provider-button small { color: #92978c; font-size: 8px; font-weight: 500; white-space: nowrap; }
 .provider-button-error { cursor: pointer; opacity: 1; }
 .provider-button-error:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+.provider-button-active { cursor: pointer; opacity: 1; transition: background .18s ease, border-color .18s ease; }
+.provider-button-active:hover { background: rgba(255,255,255,.075); border-color: rgba(255,255,255,.24); }
+.provider-button-active:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 .provider-google-mark { font: 700 14px Arial, sans-serif; color: #72a7f8; }
-.provider-apple-mark { width: 13px; height: 13px; fill: currentColor; }
+.provider-github-mark { width: 15px; height: 15px; flex: 0 0 15px; }
 .auth-divider { display: flex; align-items: center; gap: 11px; margin: 13px 0 12px; color: #858a81; font: 8px 'DM Mono', monospace; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; }
 .auth-divider::before, .auth-divider::after { height: 1px; flex: 1; content: ''; background: rgba(255,255,255,.085); }
 .form-stack { gap: 10px; margin-top: 0; }

@@ -60,6 +60,9 @@ test('production config requires an exact HTTPS frontend origin', () => {
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).googleClientId, null);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: '123-test.apps.googleusercontent.com' }).googleClientId, '123-test.apps.googleusercontent.com');
   assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: 'not-a-google-client' }), /GOOGLE_CLIENT_ID/);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).githubClientId, null);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GITHUB_CLIENT_ID: 'Ov23liExample', GITHUB_CLIENT_SECRET: 'secret-that-stays-on-the-server' }).githubClientId, 'Ov23liExample');
+  assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GITHUB_CLIENT_ID: 'Ov23liExample' }), /GITHUB_CLIENT_ID/);
 });
 
 test('rate-limit storage stays bounded under distinct keys', () => {

@@ -9,8 +9,8 @@ import './landing-desktop.css';
 import './flow-stage.css';
 
 // The service worker can otherwise keep serving an older landing page after deployment.
-// Refresh the public landing page when an updated worker takes control. Forms and
-// the room editor keep their current state until the user navigates or reloads.
+// Refresh public pages when an updated worker takes control. Keep any typed form
+// values and the room editor in place until the user navigates or reloads.
 if (import.meta.env.PROD && import.meta.env.MODE !== 'android' && 'serviceWorker' in navigator) {
   let hadController = Boolean(navigator.serviceWorker.controller);
   let reloading = false;
@@ -20,7 +20,9 @@ if (import.meta.env.PROD && import.meta.env.MODE !== 'android' && 'serviceWorker
       hadController = true;
       return;
     }
-    if (reloading || window.location.pathname !== '/') return;
+    const path = window.location.pathname;
+    if (reloading || !['/', '/login', '/register'].includes(path)) return;
+    if (path !== '/' && [...document.querySelectorAll('input')].some((input) => input.value)) return;
     reloading = true;
     window.location.reload();
   });

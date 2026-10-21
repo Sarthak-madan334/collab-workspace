@@ -44,6 +44,7 @@ export async function request(path, { token, ...options } = {}) {
 export const authApi = {
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   google: (credential) => request('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) }),
+  github: (data) => request('/auth/github', { method: 'POST', body: JSON.stringify(data) }),
   login: (data) => {
     if (DEMO_MODE && data.email.trim().toLowerCase() === DEMO_EMAIL && data.password === DEMO_PASSWORD) {
       return Promise.resolve({ user: DEMO_USER, token: DEMO_TOKEN, expiresAt: null });

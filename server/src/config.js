@@ -7,6 +7,8 @@ export function loadConfig(env = process.env) {
   const sessionHours = Number(env.SESSION_TTL_HOURS || 8);
   const trustProxyHops = Number(env.TRUST_PROXY_HOPS || 0);
   const googleClientId = env.GOOGLE_CLIENT_ID?.trim() || null;
+  const githubClientId = env.GITHUB_CLIENT_ID?.trim() || null;
+  const githubClientSecret = env.GITHUB_CLIENT_SECRET?.trim() || null;
   const origins = (env.CLIENT_ORIGINS ?? (production ? '' : 'http://localhost:5173'))
     .split(',').map((origin) => origin.trim()).filter(Boolean);
 
@@ -17,6 +19,11 @@ export function loadConfig(env = process.env) {
   if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0 || trustProxyHops > 2) throw new Error('TRUST_PROXY_HOPS must be 0–2');
   if (googleClientId && (googleClientId.length > 255 || !googleClientId.endsWith('.apps.googleusercontent.com') || /\s/.test(googleClientId))) {
     throw new Error('GOOGLE_CLIENT_ID must be a Google web client ID');
+  }
+  if (Boolean(githubClientId) !== Boolean(githubClientSecret) ||
+    (githubClientId && !/^[A-Za-z0-9_]{8,128}$/.test(githubClientId)) ||
+    (githubClientSecret && (githubClientSecret.length < 20 || githubClientSecret.length > 256 || /\s/.test(githubClientSecret)))) {
+    throw new Error('GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must both be configured');
   }
   if (!origins.length) throw new Error('CLIENT_ORIGINS must contain an exact frontend origin');
   for (const origin of origins) {
@@ -31,6 +38,6 @@ export function loadConfig(env = process.env) {
     // Capacitor serves bundled Android assets from this fixed HTTPS origin.
     // Keep the web origins explicit; the native app still needs a valid bearer token.
     origins: new Set([...origins, 'https://localhost']), sessionTtlMs: sessionHours * 60 * 60 * 1000,
-    trustProxyHops, logLevel: env.LOG_LEVEL || 'info', googleClientId,
+    trustProxyHops, logLevel: env.LOG_LEVEL || 'info', googleClientId, githubClientId, githubClientSecret,
   };
 }

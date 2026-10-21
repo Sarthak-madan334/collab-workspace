@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { authApi, roomApi } from './api.js';
 import { validateAuthFields } from './auth-validation.js';
+import { consumeGitHubCallback, createGitHubAuthorizationUrl } from './github-oauth.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
@@ -131,6 +132,7 @@ function AuthShell({ children }) {
 }
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+const githubClientId = import.meta.env.VITE_GITHUB_CLIENT_ID?.trim();
 let googleScriptPromise;
 
 function loadGoogleIdentity() {
@@ -216,11 +218,11 @@ function GoogleButton({ onCredential, onError, busy }) {
   return <div className={`provider-google-slot${busy ? ' provider-google-busy' : ''}`} aria-busy={busy}><div className="provider-google-host" ref={hostRef} />{!loaded && <span className="provider-google-loading" role="status">Loading Google…</span>}</div>;
 }
 
-function ProviderButtons({ onGoogleCredential, onGoogleError, busy }) {
+function ProviderButtons({ onGoogleCredential, onGoogleError, onGitHubStart, busy }) {
   return <div className="auth-providers" role="group" aria-label="Other sign-in options">
     <GoogleButton onCredential={onGoogleCredential} onError={onGoogleError} busy={busy} />
-    <button className="provider-button" type="button" disabled aria-label="Apple sign-in coming soon">
-      <svg className="provider-apple-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 1.5c.1 1.2-.4 2.4-1.2 3.2-.8 1-2.2 1.8-3.7 1.7-.2-1.2.4-2.4 1.2-3.3.9-1 2.3-1.7 3.7-1.6ZM20.5 16.9c-.6 1.3-.9 1.9-1.6 3-1 1.5-2.5 3.5-4.2 3.5-1.6 0-2-.9-4.2-.9s-2.6 1-4.2.9c-1.8 0-3.2-1.8-4.2-3.3-2.9-4.3-3.2-9.5-1.4-12.2 1.3-1.9 3.2-3.1 5.1-3.1s3.1 1 4.7 1c1.5 0 2.4-1 4.6-1 1.7 0 3.4.9 4.7 2.4-4.1 2.3-3.5 8.1.7 9.7Z" /></svg><span>Apple</span><small>Coming soon</small>
+    <button className={`provider-button${githubClientId && !IS_ANDROID ? ' provider-button-active' : ''}`} type="button" disabled={busy || !githubClientId || IS_ANDROID} onClick={onGitHubStart} title={!githubClientId ? 'Set VITE_GITHUB_CLIENT_ID to enable GitHub sign-in' : IS_ANDROID ? 'GitHub sign-in is available on the website' : undefined}>
+      <svg className="provider-github-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.76-.24.76-.54v-2.15c-3.09.67-3.74-1.31-3.74-1.31-.5-1.28-1.23-1.62-1.23-1.62-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 .1.84 2.1 3.2 1.49.1-.72.39-1.21.71-1.49-2.47-.28-5.07-1.24-5.07-5.54 0-1.22.44-2.22 1.15-3-.11-.28-.5-1.42.11-2.96 0 0 .94-.3 3.08 1.14a10.7 10.7 0 0 1 5.6 0c2.14-1.44 3.08-1.14 3.08-1.14.61 1.54.22 2.68.11 2.96.72.78 1.15 1.78 1.15 3 0 4.31-2.6 5.25-5.08 5.53.4.35.76 1.03.76 2.08v3.09c0 .3.2.65.77.54A11.2 11.2 0 0 0 12 .8Z" /></svg><span>GitHub</span>{(!githubClientId || IS_ANDROID) && <small>{IS_ANDROID ? 'Web only' : 'Not configured'}</small>}
     </button>
   </div>;
 }
@@ -255,6 +257,21 @@ function AuthPage({ register = false }) {
     } finally {
       submitLock.current = false;
       setBusy(false);
+    }
+  };
+
+  const signInWithGitHub = async () => {
+    if (submitLock.current) return;
+    submitLock.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const url = await createGitHubAuthorizationUrl(githubClientId, window.location.origin, window.sessionStorage);
+      window.location.assign(url);
+    } catch (err) {
+      submitLock.current = false;
+      setBusy(false);
+      setError(err instanceof Error ? err.message : 'GitHub sign-in could not start. Please try again.');
     }
   };
 
@@ -295,7 +312,7 @@ function AuthPage({ register = false }) {
       <div className="card-kicker"><span className="kicker-icon"><Fingerprint size={15} /></span> YOUR WORKSPACE, YOUR PEOPLE</div>
       <h2>{register ? 'Create your account' : 'Welcome back'}</h2>
       <p className="auth-card-sub">{register ? 'Make a little room for your team’s next good idea.' : 'Sign in to pick up where your team left off.'}</p>
-      <ProviderButtons onGoogleCredential={signInWithGoogle} onGoogleError={setError} busy={busy} />
+      <ProviderButtons onGoogleCredential={signInWithGoogle} onGoogleError={setError} onGitHubStart={signInWithGitHub} busy={busy} />
       <div className="auth-divider"><span>Or continue with email</span></div>
       <form onSubmit={submit} className="form-stack" noValidate aria-busy={busy}>
         {register && <div className="field-label"><label htmlFor="register-name">Full name</label><div className={`input-wrap${fieldErrors.name ? ' input-wrap-invalid' : ''}`}><Users size={16} aria-hidden="true" /><input ref={nameRef} id="register-name" autoComplete="name" required maxLength={50} value={name} onChange={updateField('name', setName)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'register-name-error' : undefined} placeholder="How should we call you?" /></div>{fieldErrors.name && <span className="field-error" id="register-name-error">{fieldErrors.name}</span>}</div>}
@@ -310,6 +327,39 @@ function AuthPage({ register = false }) {
     </div>
     <div className="form-below"><span>Private rooms</span><i /><span>Live presence</span><i /><span>Revision history</span></div>
   </AuthShell>;
+}
+
+function GitHubCallbackPage() {
+  const { setSession } = useSession();
+  const navigate = useNavigate();
+  const exchangeRef = useRef(null);
+  const [failure, setFailure] = useState('');
+
+  useEffect(() => {
+    if (!exchangeRef.current) {
+      const search = window.location.search;
+      window.history.replaceState(null, '', window.location.pathname);
+      exchangeRef.current = Promise.resolve().then(() => {
+        const pending = consumeGitHubCallback(search, window.sessionStorage);
+        return authApi.github({ ...pending, redirectUri: `${window.location.origin}/auth/github/callback` });
+      });
+    }
+    let active = true;
+    exchangeRef.current.then((result) => {
+      if (!active) return;
+      setSession({ user: result.user, token: result.token, expiresAt: result.expiresAt });
+      navigate('/dashboard', { replace: true });
+    }).catch((error) => {
+      if (active) setFailure(error instanceof Error ? error.message : 'GitHub sign-in failed. Please try again.');
+    });
+    return () => { active = false; };
+  }, [navigate, setSession]);
+
+  return <AuthShell><div className="auth-card glass-panel" role="status">
+    <h2>{failure ? 'Could not sign in' : 'Connecting GitHub…'}</h2>
+    <p className="auth-card-sub">{failure || 'Checking your GitHub account and opening your workspace.'}</p>
+    {failure && <Link className="button button-primary auth-submit" to="/login">Back to sign in <ArrowRight size={16} /></Link>}
+  </div></AuthShell>;
 }
 
 function ThemePicker() {
@@ -1606,7 +1656,7 @@ function PrivacyPage() {
       <section><h2><LockKeyhole size={16} /> Account information</h2><p>When you register or sign in, Synkro sends your name, email address, and password to the configured application server so it can create or check your account. Password handling and account storage are managed by that server. The frontend does not save your password.</p></section>
       <section><h2><PenLine size={16} /> Notes and rooms</h2><p>Room names, invite codes, note text, revision history, and collaboration events are sent to the application server when you use those features. The project is designed to store workspace data in MongoDB Atlas. Room access is intended for authenticated members; invite codes should be shared only with people you want to join.</p></section>
       <section><h2><KeyRound size={16} /> Sign-in session</h2><p>The current frontend keeps the session token in memory for the open page. It is not written to local storage. Reloading the page signs you out, and you need to sign in again. Sign out asks the server to revoke the active session and clears the frontend session.</p></section>
-      <section><h2><Globe2 size={16} /> Network and service providers</h2><p>The browser communicates with the backend URL configured for the app over HTTP and Socket.IO; production deployments should use HTTPS and secure WebSockets. The page currently loads DM Sans, Manrope, and DM Mono fonts from Google Fonts, so opening the site makes a font request to Google. See Google's privacy information for how it handles those requests.</p><a className="privacy-external" href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google privacy information <ArrowUpRight size={13} /></a></section>
+      <section><h2><Globe2 size={16} /> Network and service providers</h2><p>The browser communicates with the backend URL configured for the app over HTTP and Socket.IO; production deployments should use HTTPS and secure WebSockets. Choosing Google or GitHub sign-in sends you to that provider, which shares verified identity information with Synkro. The page also loads DM Sans, Manrope, and DM Mono fonts from Google Fonts, so opening the site makes a font request to Google. See Google's privacy information for how it handles those requests.</p><a className="privacy-external" href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google privacy information <ArrowUpRight size={13} /></a></section>
       <section><h2><Database size={16} /> Analytics and your choices</h2><p>The frontend does not include an analytics or advertising SDK. You can leave a room or sign out at any time. Ask the project maintainers through the <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">repository</a> about data access or removal. Data retention and deletion are handled by the service operator.</p></section>
       <div className="privacy-caveat"><ShieldCheck size={15} /><p>This is a project privacy notice, not legal advice. The service operator should update it if hosting, storage, analytics, or account practices change.</p></div>
       <Link className="button button-glass privacy-back" to="/"> <ArrowLeft size={14} /> Back to Synkro</Link>
@@ -1621,6 +1671,7 @@ export default function App() {
     <Route path="/privacy" element={<PrivacyPage />} />
     <Route path="/login" element={<AuthPage />} />
     <Route path="/register" element={<AuthPage register />} />
+    <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
     <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
     <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
     <Route path="*" element={<NotFound />} />

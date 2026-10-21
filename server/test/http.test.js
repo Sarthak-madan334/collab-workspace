@@ -7,7 +7,7 @@ import { RateLimiter } from '../src/rate-limit.js';
 test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async (t) => {
   let ready = true;
   const config = { origins: new Set(['http://localhost:5173', 'https://localhost']), trustProxyHops: 0, logLevel: 'silent' };
-  const auth = { authenticate: async () => ({ user: { _id: 'user' } }), me: async () => ({ user: { id: 'user' } }), loginGoogle: async ({ credential }) => ({ token: credential }) };
+  const auth = { authenticate: async () => ({ user: { _id: 'user' } }), me: async () => ({ user: { id: 'user' } }), loginGoogle: async ({ credential }) => ({ token: credential }), loginGitHub: async ({ code }, origin) => ({ token: code, origin }) };
   const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, limiter: new RateLimiter(), ready: () => ready });
   const server = createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -26,6 +26,9 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   const google = await fetchJson('/api/v1/auth/google', { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: 'test' }) });
   assert.equal(google.response.status, 200);
   assert.equal(google.body.data.token, 'test');
+  const github = await fetchJson('/api/v1/auth/github', { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ code: 'test' }) });
+  assert.equal(github.response.status, 200);
+  assert.equal(github.body.data.origin, 'http://localhost:5173');
   const android = await fetchJson('/health/ready', { headers: { Origin: 'https://localhost' } });
   assert.equal(android.response.status, 200);
   assert.equal(android.response.headers.get('Access-Control-Allow-Origin'), 'https://localhost');
