@@ -22,7 +22,7 @@ export function createApp(config, { db, auth, rooms, notes, files, codeRunner, a
       response.set('Access-Control-Allow-Origin', origin);
       response.set('Vary', 'Origin');
       response.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-      response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     }
     if (request.method === 'OPTIONS') return response.sendStatus(204);
     if (!ready() && !request.path.startsWith('/health/')) return next(error(503, 'SERVICE_UNAVAILABLE', 'Server is shutting down'));
@@ -94,6 +94,10 @@ export function createApp(config, { db, auth, rooms, notes, files, codeRunner, a
     return files.listMine(request.actor.user._id);
   }));
   app.get('/api/v1/rooms/:roomId', route((request) => rooms.get(request.actor.user._id, request.params.roomId)));
+  app.delete('/api/v1/rooms/:roomId', route((request) => {
+    limiter.check(`room-delete:${request.actor.user._id}`, 10, 60 * 1000);
+    return rooms.deleteRoom(request.token, request.params.roomId);
+  }));
   app.get('/api/v1/rooms/:roomId/note', route((request) => rooms.note(request.actor.user._id, request.params.roomId)));
   app.post('/api/v1/rooms/:roomId/ai/insights', route((request) => {
     assert(ai, 503, 'AI_NOT_CONFIGURED', 'AI is not configured. Add GROQ_API_KEY to the server environment.');

@@ -92,6 +92,11 @@ test('socket origin, membership, presence, and session revocation', async (t) =>
   eventGate = null;
   await first.emitWithAck('room:leave', { roomId });
   assert.equal(presence.snapshot(roomId).users.length, 1);
+  const deletedEvent = new Promise((resolve) => second.once('room:deleted', resolve));
+  await socketServer.deleteRoom(roomId);
+  assert.deepEqual(await deletedEvent, { roomId });
+  assert.equal(presence.snapshot(roomId).users.length, 0);
+  assert.equal((await socketServer.io.in(roomId).fetchSockets()).length, 0);
   const extraSockets = [];
   for (let index = 0; index < 6; index += 1) extraSockets.push(await connect('valid'));
   t.after(() => extraSockets.forEach((socket) => socket.disconnect()));

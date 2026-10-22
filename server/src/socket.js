@@ -49,6 +49,15 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
   }
   function publish(event, payload) { io.to(payload.roomId).emit(event, payload); }
   function publishPresence(roomId) { publish('presence:updated', presence.snapshot(roomId)); }
+  async function deleteRoom(roomId) {
+    const id = objectId(roomId).toString();
+    io.to(id).emit('room:deleted', { roomId: id });
+    const joined = [...io.of('/').sockets.values()].filter((socket) => socket.rooms.has(id));
+    for (const socket of joined) {
+      await socket.leave(id);
+      if (presence.remove(id, socket.id, socket.data.userId)) publishPresence(id);
+    }
+  }
 
   io.use(async (socket, next) => {
     try {
@@ -174,5 +183,5 @@ export function createSocketServer(httpServer, config, { auth, rooms, notes, que
   async function drain() {
     while (activeHandlers.size) await Promise.all([...activeHandlers]);
   }
-  return { io, revoke, publish, drain };
+  return { io, revoke, publish, deleteRoom, drain };
 }

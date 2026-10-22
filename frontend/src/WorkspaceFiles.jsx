@@ -79,11 +79,15 @@ function useFileEvents(token, roomId, onEvent, onPresence) {
     const updated = (event) => {
       if (event.roomId === roomId) callback.current(event);
     };
+    const deleted = (event) => {
+      if (event.roomId === roomId) callback.current({ ...event, type: 'room:deleted' });
+    };
     const presenceUpdated = (event) => syncPresence(event);
     const disconnected = () => presenceCallback.current?.(null);
     socket.on('connect', join);
     socket.on('file:created', created);
     socket.on('file:updated', updated);
+    socket.on('room:deleted', deleted);
     socket.on('file:contributions-updated', updated);
     socket.on('presence:updated', presenceUpdated);
     socket.on('disconnect', disconnected);
@@ -92,6 +96,7 @@ function useFileEvents(token, roomId, onEvent, onPresence) {
       socket.off('connect', join);
       socket.off('file:created', created);
       socket.off('file:updated', updated);
+      socket.off('room:deleted', deleted);
       socket.off('file:contributions-updated', updated);
       socket.off('presence:updated', presenceUpdated);
       socket.off('disconnect', disconnected);
@@ -1005,6 +1010,7 @@ function versionPreviewText(type, version) {
 
 export function FileEditor({ token, userId }) {
   const { roomId, fileId } = useParams();
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [status, setStatus] = useState('Loading…');
@@ -1068,6 +1074,10 @@ export function FileEditor({ token, userId }) {
     };
   }, [token, roomId, fileId, receive]);
   useFileEvents(token, roomId, (event) => {
+    if (event.type === 'room:deleted') {
+      navigate('/dashboard', { replace: true, state: { roomDeleted: true } });
+      return;
+    }
     if (event.file?.id === fileId && event.file.content) receive(event.file);
     if (event.fileId === fileId && filePanel === 'contributions') {
       fileApi.contributions(token, roomId, fileId).then(setContributionMap).catch(() => {});

@@ -28,6 +28,15 @@ export function demoFileListMine() {
     .map(({ content: _content, fieldRevisions: _fields, ...summary }) => summary);
 }
 
+export function demoFileDeleteRoom(roomId) {
+  const files = read();
+  const deletedIds = Object.values(files).filter((file) => file.roomId === roomId).map((file) => file.id);
+  write(Object.fromEntries(Object.entries(files).filter(([, file]) => file.roomId !== roomId)));
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  for (const fileId of deletedIds) delete history[fileId];
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
 export function demoFileCreate(roomId, type, title) {
   if (!demoRoom(roomId)) throw new Error('Room not found.');
   const now = new Date().toISOString();

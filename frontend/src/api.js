@@ -1,10 +1,10 @@
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1').replace(/\/$/, '');
 import {
   DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD, DEMO_TOKEN, DEMO_USER,
-  demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
+  demoCreateRoom, demoDeleteRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
 } from './demo.js';
 import { IS_ANDROID } from './native-session.js';
-import { demoFileAssign, demoFileContributions, demoFileCreate, demoFileGet, demoFileHistory, demoFileList, demoFileListMine, demoFileRestore, demoFileSetAreaStatus, demoFileUpdate, demoFileVersion } from './file-demo.js';
+import { demoFileAssign, demoFileContributions, demoFileCreate, demoFileDeleteRoom, demoFileGet, demoFileHistory, demoFileList, demoFileListMine, demoFileRestore, demoFileSetAreaStatus, demoFileUpdate, demoFileVersion } from './file-demo.js';
 
 export class ApiError extends Error {
   constructor(message, code, status) {
@@ -85,6 +85,13 @@ export const roomApi = {
       return Promise.resolve({ inviteCode });
     }
     return request(`/rooms/${encodeURIComponent(roomId)}/invite/rotate`, { token, method: 'POST' });
+  },
+  delete: (token, roomId) => {
+    if (DEMO_MODE && token === DEMO_TOKEN) {
+      demoFileDeleteRoom(roomId);
+      return Promise.resolve(demoDeleteRoom(roomId));
+    }
+    return request(`/rooms/${encodeURIComponent(roomId)}`, { token, method: 'DELETE' });
   },
   versions: (token, roomId, beforeRevision) => {
     if (DEMO_MODE && token === DEMO_TOKEN) {

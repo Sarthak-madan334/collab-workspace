@@ -23,8 +23,10 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   };
   const codeRunner = { run: async (payload) => ({ status: 'Accepted', stdout: `${payload.language} output`, stderr: '', compileOutput: '', time: '0.001', memory: 1000 }) };
   let runFileType = 'code';
+  const deletedRooms = [];
   files.get = async (_userId, roomId, fileId) => ({ file: { roomId, fileId, type: runFileType } });
-  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, files, codeRunner, limiter: new RateLimiter(), ready: () => ready });
+  const rooms = { deleteRoom: async (token, roomId) => { deletedRooms.push({ token, roomId }); return { deleted: true, roomId }; } };
+  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms, notes: {}, files, codeRunner, limiter: new RateLimiter(), ready: () => ready });
   const server = createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -39,6 +41,16 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   assert.equal(unauthed.response.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5173');
   assert.equal(unauthed.response.headers.get('Cache-Control'), 'no-store');
   assert.equal(unauthed.response.headers.get('X-Content-Type-Options'), 'nosniff');
+  const deletePreflightResponse = await fetch(`${url}/api/v1/rooms/0123456789abcdef01234567`, { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173', 'Access-Control-Request-Method': 'DELETE' } });
+  assert.equal(deletePreflightResponse.status, 204);
+  assert.match(deletePreflightResponse.headers.get('Access-Control-Allow-Methods'), /DELETE/);
+  const deleteUnauthed = await fetchJson('/api/v1/rooms/0123456789abcdef01234567', { method: 'DELETE' });
+  assert.equal(deleteUnauthed.response.status, 401);
+  const deleteAllowed = await fetchJson('/api/v1/rooms/0123456789abcdef01234567', { method: 'DELETE', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173' } });
+  assert.equal(deleteAllowed.response.status, 200);
+  assert.equal(deleteAllowed.body.data.deleted, true);
+  assert.deepEqual(deletedRooms, [{ token: 'test', roomId: '0123456789abcdef01234567' }]);
+  assert.match(deleteAllowed.response.headers.get('Access-Control-Allow-Origin'), /localhost/);
   assert.equal((await fetchJson('/api/v1/rooms/room/files')).response.status, 401);
   const filesList = await fetchJson('/api/v1/rooms/room/files', { headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173' } });
   assert.equal(filesList.response.status, 200);

@@ -1,4 +1,4 @@
-import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
@@ -6,7 +6,7 @@ import {
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
   LockKeyhole, MessageCircle, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi, Code2,
-  Palette, X, Zap,
+  Palette, Trash2, X, Zap,
 } from 'lucide-react';
 import { authApi, fileApi, roomApi } from './api.js';
 import { validateAuthFields } from './auth-validation.js';
@@ -19,6 +19,7 @@ import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WOR
 import FlowStage from './FlowStage.jsx';
 import { StudioHome, FileEditor } from './WorkspaceFiles.jsx';
 import WorkspaceAssistant from './WorkspaceAssistant.jsx';
+import { hasExactRoomConfirmation, initialRoomActionsState, isRoomOwner, removeRoomById, roomActionsReducer, roomMenuFocusIndex, shouldCloseRoomMenuOnEscape, shouldCloseRoomMenuOnPointerDown } from './room-actions.js';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
 
 const NativeBridge = lazy(() => import('./NativeBridge.jsx'));
@@ -729,7 +730,9 @@ function Dashboard() {
   const { session } = useSession();
   const { rooms, setRooms, loading, error, refresh } = useRooms();
   const navigate = useNavigate();
+  const location = useLocation();
   const newRoomButtonRef = useRef(null);
+  const deleteLockRef = useRef(false);
   const [dialog, setDialog] = useState('');
   const [roomName, setRoomName] = useState('');
   const [createKind, setCreateKind] = useState('room');
@@ -740,6 +743,9 @@ function Dashboard() {
   const [guideSeen, setGuideSeen] = useState(() => readGuideDismissed(storageKey));
   const [guideActive, setGuideActive] = useState(false);
   const [guideReplayToken, setGuideReplayToken] = useState(0);
+  const [roomActions, dispatchRoomActions] = useReducer(roomActionsReducer, initialRoomActionsState);
+  const closeRoomMenu = useCallback(() => dispatchRoomActions({ type: 'close-menu' }), []);
+  const closeDeleteDialog = useCallback(() => dispatchRoomActions({ type: 'cancel-delete' }), []);
   const persistGuideDismissal = useCallback(() => {
     setGuideSeen(true);
     try { window.localStorage.setItem(storageKey, 'true'); }
@@ -774,6 +780,39 @@ function Dashboard() {
     catch (err) { setMessage(err.message); }
     finally { setBusyAction(''); }
   };
+  const copyRoomInvite = async (room) => {
+    try {
+      const { inviteCode: code } = await roomApi.invite(session.token, room.id);
+      await navigator.clipboard.writeText(`${window.location.origin}/join/${encodeURIComponent(code)}`);
+      dispatchRoomActions({ type: 'set-toast', message: 'Invite link copied.' });
+    } catch (failure) {
+      dispatchRoomActions({ type: 'set-toast', message: failure.message || 'The invite link could not be copied.' });
+    }
+  };
+  const deleteSelectedRoom = async () => {
+    const target = roomActions.deletingRoom;
+    if (!target || deleteLockRef.current || !isRoomOwner(target, session.user.id) || !hasExactRoomConfirmation(target.name, roomActions.confirmation)) return;
+    deleteLockRef.current = true;
+    dispatchRoomActions({ type: 'delete-start' });
+    try {
+      await roomApi.delete(session.token, target.id);
+      setRooms((current) => removeRoomById(current, target.id));
+      dispatchRoomActions({ type: 'delete-success', message: 'Room deleted.' });
+    } catch (failure) {
+      dispatchRoomActions({ type: 'delete-failure', message: failure.message || 'The room could not be deleted. Please retry.' });
+    } finally { deleteLockRef.current = false; }
+  };
+
+  useEffect(() => {
+    if (!location.state?.roomDeleted) return;
+    dispatchRoomActions({ type: 'set-toast', message: 'This room was deleted by its owner.' });
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+  useEffect(() => {
+    if (!roomActions.toast) return undefined;
+    const timeout = window.setTimeout(() => dispatchRoomActions({ type: 'dismiss-toast' }), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [roomActions.toast]);
 
   return <>
     <section className="dashboard-hero">
@@ -805,7 +844,7 @@ function Dashboard() {
       />
 
       {error && <div className="inline-alert" role="alert"><span>{error}</span><GlassButton onClick={refresh}><RefreshCw size={14} /> Retry</GlassButton></div>}
-      {loading ? <div className="room-grid" role="status" aria-label="Loading your rooms">{[1, 2, 3].map((item) => <SkeletonLoader key={item} />)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
+      {loading ? <div className="room-grid" role="status" aria-label="Loading your rooms">{[1, 2, 3].map((item) => <SkeletonLoader key={item} />)}</div> : rooms.length ? <div className="room-grid">{rooms.map((room, index) => <RoomCard room={room} index={index} key={room.id} isOwner={isRoomOwner(room, session.user.id)} menuOpen={roomActions.openRoomId === room.id} onToggleMenu={() => dispatchRoomActions({ type: 'toggle-menu', roomId: room.id })} onCloseMenu={closeRoomMenu} onCopyInvite={() => copyRoomInvite(room)} onDelete={() => dispatchRoomActions({ type: 'begin-delete', room })} />)}<button className="room-card room-create-card glass-panel" onClick={() => setDialog('create')}>
         <div className="room-card-top"><span className="create-card-icon"><Plus size={19} /></span><ArrowUpRight className="create-arrow" size={17} /></div>
         <div className="room-card-body"><span className="room-label">NEW ROOM</span><h3>Start with a blank page</h3><p>Create a room for your next idea</p></div>
         <div className="room-card-footer"><span className="room-meta"><Plus size={14} /> Blank page</span><span className="room-open">Create room <ArrowRight size={14} /></span></div>
@@ -833,30 +872,81 @@ function Dashboard() {
         <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating…' : 'Joining room…'} /> : <>{dialog === 'create' ? createKind === 'room' ? 'Create room' : `Create ${({ slides: 'presentation', sheet: 'spreadsheet', notebook: 'notebook', document: 'document', code: 'code workspace' })[createKind] || createKind}` : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
       </form>
     </Modal>}
+    {roomActions.deletingRoom && <Modal title="Delete room?" subtitle={`This will permanently delete "${roomActions.deletingRoom.name}" and its shared content. This action cannot be undone.`} onClose={closeDeleteDialog} dismissDisabled={roomActions.deleteBusy}>
+      <form className="room-delete-form" onSubmit={(event) => { event.preventDefault(); deleteSelectedRoom(); }} aria-busy={roomActions.deleteBusy}>
+        <label className="field-label" htmlFor="room-delete-confirmation">Type the room name to confirm
+          <input id="room-delete-confirmation" className="room-delete-input" autoFocus value={roomActions.confirmation} onChange={(event) => dispatchRoomActions({ type: 'confirmation', value: event.target.value })} disabled={roomActions.deleteBusy} />
+        </label>
+        {roomActions.deleteError && <div className="form-error room-delete-error" role="alert"><span>{roomActions.deleteError}</span><button type="button" onClick={deleteSelectedRoom} disabled={roomActions.deleteBusy || !hasExactRoomConfirmation(roomActions.deletingRoom.name, roomActions.confirmation)}>Retry</button></div>}
+        <div className="modal-actions"><GlassButton type="button" onClick={closeDeleteDialog} disabled={roomActions.deleteBusy}>Cancel</GlassButton><button className="button button-danger" type="submit" disabled={roomActions.deleteBusy || !hasExactRoomConfirmation(roomActions.deletingRoom.name, roomActions.confirmation)}>{roomActions.deleteBusy ? <><span className="spinner" /> Deleting…</> : <><Trash2 size={14} /> Delete room</>}</button></div>
+      </form>
+    </Modal>}
+    {roomActions.toast && <div className="toast glass-panel" role="status"><Check size={15} /> {roomActions.toast}<button className="toast-close" type="button" onClick={() => dispatchRoomActions({ type: 'dismiss-toast' })} aria-label="Dismiss notification"><X size={14} /></button></div>}
   </>;
 }
 
-function RoomCard({ room, index }) {
+function RoomCard({ room, index, isOwner, menuOpen, onToggleMenu, onCloseMenu, onCopyInvite, onDelete }) {
   const colors = ['lime', 'violet', 'blue', 'orange'];
   const isFileSpace = room.kind === 'file';
-  return <Link className={`room-card glass-panel room-tone-${colors[index % colors.length]}`} to={`/rooms/${room.id}`}>
-    <div className="room-card-top"><span className="room-glyph">{isFileSpace ? <FileText size={17} /> : <FileClock size={17} />}</span><span className="room-card-more"><MoreHorizontal size={18} /></span></div>
-    <div className="room-card-body"><span className="room-label">{isFileSpace ? 'FILE SPACE' : 'SHARED ROOM'}</span><h3>{room.name}</h3><p>{isFileSpace ? 'Open shared documents and files' : 'Open your team’s shared workspace'}</p></div>
-    <div className="room-card-footer"><span className="room-meta"><Users size={14} /> Shared space</span><span className="room-open">Open room <ArrowUpRight size={14} /></span></div>
-  </Link>;
+  const actionsRef = useRef(null);
+  const triggerRef = useRef(null);
+  const firstActionRef = useRef(null);
+  const menuId = `room-actions-${room.id}`;
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    firstActionRef.current?.focus();
+    const onPointerDown = (event) => { if (shouldCloseRoomMenuOnPointerDown(event.target, actionsRef.current)) onCloseMenu(); };
+    const onKeyDown = (event) => {
+      if (shouldCloseRoomMenuOnEscape(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        onCloseMenu();
+        triggerRef.current?.focus();
+        return;
+      }
+      const menuItems = [...(actionsRef.current?.querySelectorAll('[role="menuitem"]') || [])];
+      const nextIndex = roomMenuFocusIndex(event.key, menuItems.indexOf(document.activeElement), menuItems.length);
+      if (nextIndex === null) return;
+      event.preventDefault();
+      menuItems[nextIndex]?.focus();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen, onCloseMenu]);
+  return <article className={`room-card glass-panel room-tone-${colors[index % colors.length]}${menuOpen ? ' room-actions-open' : ''}`}>
+    <Link className="room-card-link" to={`/rooms/${room.id}`} onClick={onCloseMenu} aria-label={`Open room ${room.name}`}>
+      <div className="room-card-top"><span className="room-glyph">{isFileSpace ? <FileText size={17} /> : <FileClock size={17} />}</span><span className="room-card-spacer" aria-hidden="true" /></div>
+      <div className="room-card-body"><span className="room-label">{isFileSpace ? 'FILE SPACE' : 'SHARED ROOM'}</span><h3>{room.name}</h3><p>{isFileSpace ? 'Open shared documents and files' : 'Open your team’s shared workspace'}</p></div>
+      <div className="room-card-footer"><span className="room-meta"><Users size={14} /> Shared space</span><span className="room-open">Open room <ArrowUpRight size={14} /></span></div>
+    </Link>
+    <div className="room-card-actions" ref={actionsRef}>
+      <button ref={triggerRef} className="room-card-more icon-button" type="button" aria-label={`Room actions for ${room.name}`} aria-haspopup="menu" aria-expanded={menuOpen} aria-controls={menuId} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleMenu(); }}><MoreHorizontal size={18} /></button>
+      {menuOpen && <div className="room-actions-menu glass-panel" id={menuId} role="menu" aria-label={`Room actions for ${room.name}`}>
+        <Link ref={firstActionRef} role="menuitem" to={`/rooms/${room.id}`} onClick={onCloseMenu}><ArrowUpRight size={15} /> Open room</Link>
+        {isOwner && <button type="button" role="menuitem" onClick={() => { onCloseMenu(); onCopyInvite(); }}><Copy size={15} /> Copy invite link</button>}
+        {isOwner && <button className="room-action-danger" type="button" role="menuitem" onClick={() => { triggerRef.current?.focus(); onDelete(); }}><Trash2 size={15} /> Delete room</button>}
+      </div>}
+    </div>
+  </article>;
 }
 
-function Modal({ title, subtitle, children, onClose }) {
+function Modal({ title, subtitle, children, onClose, dismissDisabled = false }) {
   const onCloseRef = useRef(onClose);
+  const dismissDisabledRef = useRef(dismissDisabled);
   const dialogRef = useRef(null);
   const returnFocusRef = useRef(document.activeElement);
   onCloseRef.current = onClose;
+  dismissDisabledRef.current = dismissDisabled;
   useEffect(() => {
     const previousFocus = returnFocusRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !dismissDisabledRef.current) {
         onCloseRef.current();
         return;
       }
@@ -875,7 +965,7 @@ function Modal({ title, subtitle, children, onClose }) {
       previousFocus?.focus?.();
     };
   }, []);
-  return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
+  return <div className="modal-scrim" onMouseDown={(event) => { if (!dismissDisabledRef.current && event.target === event.currentTarget) onCloseRef.current(); }}><section ref={dialogRef} className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" type="button" onClick={() => { if (!dismissDisabledRef.current) onCloseRef.current(); }} aria-label="Close dialog" disabled={dismissDisabled}><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
 }
 
 function InviteJoinRoute() {
@@ -1068,6 +1158,9 @@ function RoomPage() {
     };
     const onUpdated = (event) => { if (event.roomId === roomId) receiveCanonical(event.note, event.operationId === inFlightRef.current?.operationId); };
     const onFileChanged = (event) => { if (event.roomId === roomId) refreshRoomFiles(); };
+    const onRoomDeleted = (event) => {
+      if (event.roomId === roomId) navigate('/dashboard', { replace: true, state: { roomDeleted: true } });
+    };
     const onPresence = (event) => {
       if (event.roomId !== roomId || Number(event.presenceSequence) <= presenceSequenceRef.current) return;
       presenceSequenceRef.current = Number(event.presenceSequence);
@@ -1075,13 +1168,13 @@ function RoomPage() {
     };
     const onExpired = () => { setConnection('error'); setSession(null); navigate('/login', { replace: true }); };
     socket.on('connect', onConnect); socket.on('disconnect', onDisconnect); socket.on('connect_error', onConnectError);
-    socket.on('note:updated', onUpdated); socket.on('presence:updated', onPresence); socket.on('file:created', onFileChanged); socket.on('file:updated', onFileChanged); socket.on('session:expired', onExpired);
+    socket.on('note:updated', onUpdated); socket.on('presence:updated', onPresence); socket.on('file:created', onFileChanged); socket.on('file:updated', onFileChanged); socket.on('room:deleted', onRoomDeleted); socket.on('session:expired', onExpired);
     socket.connect();
     return () => {
       joined = false;
       window.clearTimeout(retryJoinTimer);
       socket.off('connect', onConnect); socket.off('disconnect', onDisconnect); socket.off('connect_error', onConnectError);
-      socket.off('note:updated', onUpdated); socket.off('presence:updated', onPresence); socket.off('file:created', onFileChanged); socket.off('file:updated', onFileChanged); socket.off('session:expired', onExpired);
+      socket.off('note:updated', onUpdated); socket.off('presence:updated', onPresence); socket.off('file:created', onFileChanged); socket.off('file:updated', onFileChanged); socket.off('room:deleted', onRoomDeleted); socket.off('session:expired', onExpired);
       if (socket.connected) socket.emit('room:leave', { roomId });
       socket.disconnect(); socketRef.current = null;
     };

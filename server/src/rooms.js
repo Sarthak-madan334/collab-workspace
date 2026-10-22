@@ -10,11 +10,15 @@ export const noteShape = (note) => ({
   updatedBy: note.updatedBy.toString(), updatedAt: note.updatedAt.toISOString(),
 });
 
-export function createRoomService(db, client, auth, queue) {
+export function createRoomService(db, client, auth, queue, onDeleted = () => {}) {
   const rooms = db.collection('rooms');
   const memberships = db.collection('memberships');
   const notes = db.collection('notes');
   const versions = db.collection('versions');
+  const files = db.collection('files');
+  const fileOperations = db.collection('fileOperations');
+  const fileVersions = db.collection('fileVersions');
+  const fileAssignments = db.collection('fileAssignments');
 
   async function access(userId, roomId, ownerOnly = false, session) {
     const id = typeof roomId === 'string' ? objectId(roomId) : roomId;
@@ -119,5 +123,28 @@ export function createRoomService(db, client, auth, queue) {
       return { inviteCode: code };
     });
   }
-  return { access, create, join, list, get, note, invite, rotate };
+  async function deleteRoom(token, roomId) {
+    const id = objectId(roomId);
+    return queue.run(id.toString(), async () => {
+      const actor = await auth.authenticate(token);
+      await transaction(client, async (session) => {
+        const room = await access(actor.user._id, id, true, session);
+        const options = { session };
+        const roomFiles = await files.find({ roomId: id }, { ...options, projection: { _id: 1 } }).toArray();
+        const fileIds = roomFiles.map((file) => file._id);
+        await fileAssignments.deleteMany({ $or: [{ roomId: id }, { fileId: { $in: fileIds } }] }, options);
+        await fileVersions.deleteMany({ roomId: id }, options);
+        await fileOperations.deleteMany({ roomId: id }, options);
+        await files.deleteMany({ roomId: id }, options);
+        await versions.deleteMany({ roomId: id }, options);
+        await notes.deleteMany({ roomId: id }, options);
+        await memberships.deleteMany({ roomId: id }, options);
+        const deleted = await rooms.deleteOne({ _id: room._id }, options);
+        assert(deleted.deletedCount === 1, 404, 'NOT_FOUND', 'Room not found');
+      });
+      await onDeleted(id.toString());
+      return { deleted: true, roomId: id.toString() };
+    });
+  }
+  return { access, create, join, list, get, note, invite, rotate, deleteRoom };
 }

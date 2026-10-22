@@ -21,7 +21,7 @@ const presence = new Presence();
 let socketServer;
 let ready = true;
 const auth = createAuthService(db, client, config, (sessionId) => socketServer?.revoke(sessionId));
-const rooms = createRoomService(db, client, auth, queue);
+const rooms = createRoomService(db, client, auth, queue, (roomId) => socketServer?.deleteRoom(roomId));
 const notes = createNoteService(db, client, auth, rooms, queue, (event, payload) => socketServer?.publish(event, payload));
 const files = createFileService(db, client, auth, rooms, queue, (event, payload) => socketServer?.publish(event, payload));
 const codeRunner = createCodeRunner(config);

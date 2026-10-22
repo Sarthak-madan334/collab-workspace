@@ -717,21 +717,23 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
     const id = objectId(roomId), fileObjectId = objectId(fileId);
     const areaId = string(payload.areaId, 'Work area', 1, 100);
     assert(payload.assigneeId === null || typeof payload.assigneeId === 'string', 422, 'VALIDATION_FAILED', 'Choose a teammate');
-    const actor = await auth.authenticate(token);
-    const room = await rooms.access(actor.user._id, id);
-    const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
-    assert(file, 404, 'NOT_FOUND', 'File not found');
-    assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
-    const assigneeId = payload.assigneeId === null ? null : objectId(payload.assigneeId);
-    if (assigneeId) {
-      const member = await memberships.findOne({ roomId: room._id, userId: assigneeId });
-      assert(member, 404, 'NOT_FOUND', 'Teammate is not a member of this room');
-    }
-    await saveAreaWork(fileObjectId, areaId, {
-      roomId: room._id, assigneeId, assignedBy: actor.user._id, updatedAt: new Date(),
-    }, { status: 'todo' });
-    publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId });
-    return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+    return queue.run(id.toString(), async () => {
+      const actor = await auth.authenticate(token);
+      const room = await rooms.access(actor.user._id, id);
+      const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
+      assert(file, 404, 'NOT_FOUND', 'File not found');
+      assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
+      const assigneeId = payload.assigneeId === null ? null : objectId(payload.assigneeId);
+      if (assigneeId) {
+        const member = await memberships.findOne({ roomId: room._id, userId: assigneeId });
+        assert(member, 404, 'NOT_FOUND', 'Teammate is not a member of this room');
+      }
+      await saveAreaWork(fileObjectId, areaId, {
+        roomId: room._id, assigneeId, assignedBy: actor.user._id, updatedAt: new Date(),
+      }, { status: 'todo' });
+      publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId });
+      return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+    });
   }
 
   async function updateAreaStatus(token, roomId, fileId, areaIdValue, payload) {
@@ -739,16 +741,18 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
     const id = objectId(roomId), fileObjectId = objectId(fileId);
     const areaId = string(areaIdValue, 'Work area', 1, 100);
     const status = validateWorkStatus(payload.status);
-    const actor = await auth.authenticate(token);
-    const room = await rooms.access(actor.user._id, id);
-    const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
-    assert(file, 404, 'NOT_FOUND', 'File not found');
-    assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
-    await saveAreaWork(fileObjectId, areaId, {
-      roomId: room._id, status, statusUpdatedBy: actor.user._id, updatedAt: new Date(),
-    }, { assigneeId: null });
-    publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId, status });
-    return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+    return queue.run(id.toString(), async () => {
+      const actor = await auth.authenticate(token);
+      const room = await rooms.access(actor.user._id, id);
+      const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
+      assert(file, 404, 'NOT_FOUND', 'File not found');
+      assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
+      await saveAreaWork(fileObjectId, areaId, {
+        roomId: room._id, status, statusUpdatedBy: actor.user._id, updatedAt: new Date(),
+      }, { assigneeId: null });
+      publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId, status });
+      return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+    });
   }
 
   return { listMine, list, get, create, update, history, version, restore, contributions, assign, updateAreaStatus };

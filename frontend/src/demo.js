@@ -44,6 +44,18 @@ export function demoInvite(roomId) {
   return invites[roomId] || 'SYNKRO-A04-DEMO';
 }
 
+export function demoDeleteRoom(roomId) {
+  const rooms = demoRooms();
+  if (!rooms.some((room) => room.id === roomId)) throw new Error('Room not found.');
+  write(ROOM_KEY, rooms.filter((room) => room.id !== roomId));
+  for (const key of [NOTE_KEY, VERSION_KEY, INVITE_KEY]) {
+    const stored = read(key, {});
+    delete stored[roomId];
+    write(key, stored);
+  }
+  return { deleted: true, roomId };
+}
+
 export function demoCreateRoom(name, kind = 'room') {
   const rooms = demoRooms();
   const room = { id: `demo-${crypto.randomUUID()}`, name, kind, ownerId: DEMO_USER.id, createdAt: new Date().toISOString() };
