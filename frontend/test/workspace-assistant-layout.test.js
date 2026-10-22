@@ -75,8 +75,8 @@ test('assistant body text and controls use readable sizes and visible focus trea
   assert.match(css, /\.wa-empty p, \.wa-chat-welcome p[^}]*font-size:\s*16px/);
   assert.match(css, /\.wa-tabs button\s*\{[^}]*font-size:\s*15px/);
   assert.match(css, /\.wa-composer label\s*\{[^}]*font-size:\s*15px/);
-  assert.match(css, /\.wa-suggestions p\s*\{[^}]*font-size:\s*15px/);
-  assert.match(css, /\.wa-result-section ul\s*\{[^}]*font-size:\s*15px/);
+  assert.match(css, /\.wa-action-card p\s*\{[^}]*font-size:\s*13px/);
+  assert.match(css, /\.wa-insight-list li, \.wa-insight-empty\s*\{[^}]*font-size:\s*13px/);
   assert.match(css, /\.wa-examples button\s*\{[^}]*font-size:\s*14px/);
   assert.match(css, /\.wa-panel :is\(button, textarea, a\):focus-visible\s*\{[^}]*outline:\s*2px solid var\(--lime\)/);
 });

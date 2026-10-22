@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ArrowUp, CheckCircle2, CircleAlert, LoaderCircle, Sparkles, X } from 'lucide-react';
+import { ArrowUp, BrainCircuit, CheckCircle2, CircleAlert, FileCheck2, FolderTree, LoaderCircle, Sparkles, UsersRound, X } from 'lucide-react';
 import { assistantApi } from './api.js';
 import { assistantReducer, initialAssistantState } from './assistant-state.js';
+import { InsightMetricCard, PriorityActionCard, ScoreRing } from './AssistantInsightComponents.jsx';
+import { isValidInsightScore, sortSuggestionsByPriority } from './assistant-insight-utils.js';
 import './workspace-assistant.css';
 
 const QUESTION_LIMIT = 1800;
@@ -18,14 +20,6 @@ function readableError(failure) {
   if (failure.code === 'AI_TIMEOUT') return 'The assistant took too long to respond. Please retry.';
   if (failure.code === 'RATE_LIMITED') return 'The assistant is receiving too many requests. Please wait a moment and retry.';
   return failure.message || 'The assistant could not complete that request. Please retry.';
-}
-
-function Score({ label, score, detail }) {
-  return <div className="wa-score">
-    <div className="wa-score-top"><span>{label}</span><strong>{score}<small>/100</small></strong></div>
-    <div className="wa-score-track" aria-hidden="true"><i style={{ width: `${score}%` }} /></div>
-    {detail && <small className="wa-score-detail">{detail}</small>}
-  </div>;
 }
 
 export default function WorkspaceAssistant({ token, roomId, activeFileId, launcherClassName = 'toolbar-button glass-panel', disabled = false, onOpenChange }) {
@@ -108,7 +102,7 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
     {open && <div className="wa-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanelOpen(false); }}>
       <aside ref={panelRef} className="wa-panel" role="dialog" aria-modal="true" aria-labelledby="wa-title" aria-describedby="wa-description">
         <header className="wa-header">
-          <div className="wa-heading-icon"><Sparkles size={17} /></div>
+          <div className="wa-heading-icon"><BrainCircuit size={20} aria-hidden="true" /></div>
           <div className="wa-heading-copy"><span className="section-kicker">YOUR WORKSPACE, IN FOCUS</span><h2 id="wa-title">AI Assistant</h2></div>
           <button ref={closeRef} className="icon-button" type="button" onClick={() => setPanelOpen(false)} aria-label="Close AI Assistant"><X size={18} /></button>
           <p id="wa-description" className="sr-only">Workspace insights and questions, based only on content you are authorized to view.</p>
@@ -122,18 +116,22 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
           {state.insightStatus === 'loading' && <div className="wa-loading" role="status"><LoaderCircle className="wa-spin" size={21} /><strong>Reviewing this workspace</strong><span>Only its authorized notes and files are considered.</span></div>}
           {state.insightStatus === 'error' && <div className="wa-error" role="alert"><CircleAlert size={18} /><p>{state.insightError}</p><button className="button" type="button" onClick={askInsights}><ArrowUp size={14} /> Retry</button></div>}
           {state.insightStatus === 'success' && insights && <div className="wa-results">
-            <div className="wa-overall"><div><span className="section-kicker">OVERALL PROJECT HEALTH</span><strong>{insights.overallScore}<small>/100</small></strong><span className={`wa-label wa-label-${insights.overallLabel.toLowerCase().replaceAll(' ', '-')}`}>{insights.overallLabel}</span></div><p>{insights.summary}</p></div>
-            <div className="wa-scores">
-              <Score label="Collaboration smoothness" score={insights.collaborationScore} detail={insights.collaborationLabel} />
-              <Score label="Content completeness" score={insights.completenessScore} />
-              <Score label="Organization" score={insights.organizationScore} />
+            <section className="wa-health-card" aria-label="Project health estimate">
+              {isValidInsightScore(insights.overallScore) ? <ScoreRing score={insights.overallScore} label={insights.overallLabel} /> : <div className="wa-health-unavailable" role="status">—</div>}
+              <div className="wa-health-copy"><span className="section-kicker">PROJECT HEALTH ESTIMATE</span><h3>{insights.overallLabel || 'Estimate unavailable'}</h3><p>AI-generated from the workspace context. This is an estimate, not work completed.</p></div>
+            </section>
+            <div className="wa-scores" aria-label="Project insight metrics">
+              <InsightMetricCard title="Collaboration" score={insights.collaborationScore} detail={insights.collaborationLabel} Icon={UsersRound} tone="collaboration" />
+              <InsightMetricCard title="Content completeness" score={insights.completenessScore} Icon={FileCheck2} tone="content" />
+              <InsightMetricCard title="Organization" score={insights.organizationScore} Icon={FolderTree} tone="organization" />
             </div>
-            {insights.suggestions.length > 0 && <section className="wa-result-section"><h3>Suggested next actions</h3><ol className="wa-suggestions">{insights.suggestions.map((suggestion, index) => <li key={`${suggestion.title}-${index}`}><span className={`wa-priority wa-priority-${suggestion.priority}`}>{suggestion.priority}</span><div><strong>{suggestion.title}</strong><p>{suggestion.detail}</p></div></li>)}</ol></section>}
-            <div className="wa-result-columns">
-              <section className="wa-result-section"><h3><CheckCircle2 size={14} /> Strengths</h3>{insights.strengths.length ? <ul>{insights.strengths.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>None identified from the available context.</p>}</section>
-              <section className="wa-result-section"><h3><CircleAlert size={14} /> Risks or missing items</h3>{insights.risks.length ? <ul>{insights.risks.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>None identified from the available context.</p>}</section>
+            <section className="wa-insight-card wa-summary-card"><h3>What we found</h3>{insights.summary ? <p>{insights.summary}</p> : <p className="wa-insight-empty">No summary was returned for this workspace.</p>}</section>
+            <div className="wa-insight-groups">
+              <section className="wa-insight-card wa-strengths-card"><h3><CheckCircle2 size={16} aria-hidden="true" /> Strengths</h3>{Array.isArray(insights.strengths) && insights.strengths.length ? <ul className="wa-insight-list">{insights.strengths.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="wa-insight-empty">No strengths were identified in the supplied context.</p>}</section>
+              <section className="wa-insight-card wa-attention-card"><h3><CircleAlert size={16} aria-hidden="true" /> Needs attention</h3>{Array.isArray(insights.risks) && insights.risks.length ? <ul className="wa-insight-list">{insights.risks.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="wa-insight-empty">No items were flagged for attention in the supplied context.</p>}</section>
             </div>
-            <p className="wa-confidence">{insights.confidenceNote}</p>
+            <section className="wa-next-steps"><h3>Recommended next steps</h3>{sortSuggestionsByPriority(insights.suggestions).length ? <ol className="wa-suggestions">{sortSuggestionsByPriority(insights.suggestions).map((suggestion, index) => <PriorityActionCard key={`${suggestion.title || 'action'}-${index}`} suggestion={suggestion} featured={index === 0} />)}</ol> : <p className="wa-insight-empty">No next steps were returned for this workspace.</p>}</section>
+            {insights.confidenceNote && <p className="wa-confidence">{insights.confidenceNote}</p>}
             <button className="wa-regenerate" type="button" onClick={askInsights}><Sparkles size={14} /> Generate again</button>
           </div>}
         </section> : <section id="wa-panel-chat" className="wa-view wa-chat" role="tabpanel" aria-labelledby="wa-tab-chat" tabIndex={0}>
