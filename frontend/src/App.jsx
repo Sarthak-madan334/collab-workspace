@@ -13,7 +13,7 @@ import { validateAuthFields } from './auth-validation.js';
 import { consumeGitHubCallback, createGitHubAuthorizationUrl } from './github-oauth.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD, DEMO_TOKEN } from './demo.js';
-import { buildWhatsAppShareUrl } from './invite-links.js';
+import { buildWhatsAppShareUrl, getInviteDestination } from './invite-links.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
 import FlowStage from './FlowStage.jsx';
@@ -889,6 +889,7 @@ function InviteJoinRoute() {
 function InviteJoinPage() {
   const { inviteCode = '' } = useParams();
   const { session } = useSession();
+  const location = useLocation();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -899,7 +900,9 @@ function InviteJoinPage() {
     try {
       const result = await roomApi.join(session.token, inviteCode);
       const room = result.room || result;
-      navigate(`/rooms/${room.id}`, { replace: true });
+      const params = new URLSearchParams(location.search);
+      const destination = getInviteDestination(room.id, params.get('roomId'), params.get('fileId'));
+      navigate(destination, { replace: true });
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };

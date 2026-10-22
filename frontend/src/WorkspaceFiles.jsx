@@ -21,6 +21,7 @@ import { fileApi, roomApi } from './api.js';
 import { DEMO_TOKEN } from './demo.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { evaluateCell } from './sheet-formulas.js';
+import { buildFileInviteUrl } from './invite-links.js';
 import { CodeEditor } from './CodeEditor.jsx';
 import WorkspaceAssistant from './WorkspaceAssistant.jsx';
 import './workspace-files.css';
@@ -1010,6 +1011,7 @@ export function FileEditor({ token, userId }) {
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(null);
   const [invite, setInvite] = useState('');
+  const [inviteCopied, setInviteCopied] = useState(false);
   const [roomOwnerId, setRoomOwnerId] = useState(null);
   const [filePanel, setFilePanel] = useState('');
   const [fileHistory, setFileHistory] = useState([]);
@@ -1177,8 +1179,18 @@ export function FileEditor({ token, userId }) {
     try {
       const result = await roomApi.invite(token, roomId);
       setInvite(result.inviteCode);
+      setInviteCopied(false);
     } catch (failure) {
       setError(failure.message);
+    }
+  };
+  const copyFileInvite = async () => {
+    const link = buildFileInviteUrl(window.location.origin, invite, roomId, fileId);
+    try {
+      await navigator.clipboard.writeText(link);
+      setInviteCopied(true);
+    } catch {
+      window.prompt('Copy this file invite link', link);
     }
   };
   const openFilePanel = async (panel) => {
@@ -1282,10 +1294,10 @@ export function FileEditor({ token, userId }) {
       </div>
       {invite && (
         <div className="wf-invite glass-panel">
-          <span>Invite collaborators using this code</span>
+          <span>Share this link to open this file together</span>
           <code>{invite}</code>
-          <button type="button" onClick={() => navigator.clipboard.writeText(invite)}>
-            <Copy size={15} /> Copy
+          <button type="button" onClick={copyFileInvite}>
+            <Copy size={15} /> {inviteCopied ? 'Link copied' : 'Copy file link'}
           </button>
           <button type="button" onClick={() => setInvite('')} aria-label="Hide invite code">
             <X size={15} />
