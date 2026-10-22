@@ -12,6 +12,10 @@ Use MongoDB Atlas with separate collections. API IDs are strings; validate and c
 | `memberships` | `_id`, `roomId`, `userId`, `joinedAt` |
 | `notes` | `_id`, `roomId`, `content`, `revision`, `updatedBy`, `updatedAt` |
 | `versions` | `_id`, `roomId`, `revision`, `content`, `authorId`, `operationId`, `requestHash`, `baseRevision`, `kind`, `restoredFromRevision` nullable, `createdAt` |
+| `files` | `_id`, `roomId`, `type`, `title`, `content`, `revision`, `fieldRevisions`, `createdBy`, `updatedBy`, `createdAt`, `updatedAt` |
+| `fileVersions` | `_id`, `fileId`, `roomId`, `revision`, `title`, `content`, `authorId`, `operationId`, `kind`, `restoredFromRevision` nullable, `createdAt` |
+| `fileOperations` | `fileId`, `roomId`, `operationId`, `authorId`, `requestHash`, `revision`, `patch`, `createdAt` |
+| `fileAssignments` | `fileId`, `roomId`, `areaId`, `assigneeId`, `assignedBy`, `updatedAt` |
 
 `kind` is `initial`, `edit`, or `restore`. Revision 0 is the empty initial version with a server-generated operation ID. `requestHash` hashes a canonical representation of the operation's kind and submitted fields; it detects reuse of an operation ID with different content. For restore, include source revision and expected current revision in that hash.
 
@@ -31,6 +35,10 @@ Invite redemption increments `inviteRedemptions` in the same transaction as memb
 | notes | Unique `roomId` | Exactly one note per room |
 | versions | Unique `(roomId, revision)` | Ordered immutable history |
 | versions | Unique `(roomId, operationId)` | Idempotent edits/restores |
+| fileVersions | Unique `(fileId, revision)` | Immutable document, presentation, sheet, and notebook snapshots |
+| fileVersions | Unique `(fileId, operationId)` | Idempotent edit/restore snapshots |
+| fileOperations | Unique `(fileId, operationId)` | Saved changes and contribution tracking |
+| fileAssignments | Unique `(fileId, areaId)` | One agreed owner for each file area |
 
 The room/revision index also supports descending history reads. TTL cleanup is not immediate: validate `expiresAt` on every session use regardless of whether the row still exists.
 
@@ -43,6 +51,9 @@ The room/revision index also supports descending history reads. TTL cleanup is n
 5. Restored content creates a new version with a link to its source revision.
 6. Author and owner identities come from the authenticated server context.
 7. Membership is checked against the target room for every read and mutation; knowing a version ID does not grant access.
+8. File history stores a snapshot for every committed file revision. Restore creates a new revision and advances the wildcard field revision so stale drafts cannot silently overwrite the restored file.
+9. File restores are room-owner-only. Assignments can only point to existing areas and members of that room.
+10. Contribution counts are derived from committed file operations; they describe saved activity and are not quality or effort scores.
 
 For a normal edit, read current note inside a transaction, increment revision, update note, and insert a version. A concurrent transaction conflict restarts the read/write attempt. For restore, verify the expected revision inside the transaction; on mismatch return `REVISION_CONFLICT` without modifying anything. Check committed operation identity before a restore's expected-revision check so a retry succeeds even after later edits.
 

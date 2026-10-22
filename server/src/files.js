@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { assert } from './errors.js';
 import { transaction } from './db.js';
-import { object, objectId, operationId, revision, string } from './validation.js';
+import { beforeRevision, limit, object, objectId, operationId, revision, string } from './validation.js';
 
 const TYPES = new Set(['document', 'slides', 'sheet', 'notebook']);
 const MAX_FILE_BYTES = 256 * 1024;
@@ -234,7 +234,7 @@ export function applyFilePatch(file, patch, baseRevision) {
   if (patch.action === 'setPage') key = `page:${patch.pageId}:${patch.field}`;
   if (patch.action === 'addPage' || patch.action === 'deletePage') key = 'pages:list';
   assert(
-    (fields[key] || 0) <= baseRevision,
+    Math.max(fields[key] || 0, fields['*'] || 0) <= baseRevision,
     409,
     'REVISION_CONFLICT',
     'This part of the file changed. Review the latest version.',
@@ -378,7 +378,36 @@ export function applyFilePatch(file, patch, baseRevision) {
 export function createFileService(db, client, auth, rooms, queue, publish = () => {}) {
   const files = db.collection('files');
   const operations = db.collection('fileOperations');
+  const versions = db.collection('fileVersions');
+  const assignments = db.collection('fileAssignments');
   const memberships = db.collection('memberships');
+  const users = db.collection('users');
+
+  function versionShape(row, authorName = 'Former member', includeContent = false) {
+    return { revision: row.revision, authorId: row.authorId.toString(), authorName, kind: row.kind,
+      createdAt: row.createdAt.toISOString(), restoredFromRevision: row.restoredFromRevision ?? null,
+      ...(includeContent ? { title: row.title, content: row.content } : {}) };
+  }
+
+  async function ensureCurrentSnapshot(file) {
+    const exists = await versions.findOne({ fileId: file._id, revision: file.revision }, { projection: { _id: 1 } });
+    if (!exists) {
+      try {
+        await versions.updateOne({ fileId: file._id, revision: file.revision }, { $setOnInsert: {
+          fileId: file._id, roomId: file.roomId, revision: file.revision, title: file.title,
+          content: file.content, authorId: file.updatedBy, operationId: randomUUID(), kind: 'baseline',
+          restoredFromRevision: null, createdAt: file.updatedAt,
+        } }, { upsert: true });
+      } catch (failure) { if (failure?.code !== 11000) throw failure; }
+    }
+  }
+
+  function workAreas(file) {
+    if (file.type === 'document') return [{ id: 'document', label: 'Document' }];
+    if (file.type === 'sheet') return [{ id: 'spreadsheet', label: 'Spreadsheet' }];
+    if (file.type === 'slides') return (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title?.trim() || 'Untitled slide' }));
+    return (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title?.trim() || 'Untitled page' }));
+  }
 
   async function listMine(userId) {
     const memberRows = await memberships
@@ -443,6 +472,9 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
           updatedAt: now,
         };
         await files.insertOne(next, { session });
+        await versions.insertOne({ fileId: next._id, roomId: id, revision: 0, title: next.title,
+          content: next.content, authorId: actor.user._id, operationId: randomUUID(), kind: 'initial',
+          restoredFromRevision: null, createdAt: now }, { session });
         return next;
       });
       publish('file:created', { roomId: id.toString(), file: fileSummary(file) });
@@ -514,6 +546,9 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
           },
           { session },
         );
+        await versions.insertOne({ fileId: fileObjectId, roomId: room, revision: next.revision,
+          title: next.title, content: next.content, authorId: actor.user._id, operationId: op,
+          kind: 'edit', restoredFromRevision: null, createdAt: next.updatedAt }, { session });
         return { file: next, committedNow: true };
       });
       const file = fileShape(result.file);
@@ -522,5 +557,128 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
     });
   }
 
-  return { listMine, list, get, create, update };
+  async function history(userId, roomId, fileId, query = {}) {
+    const room = await rooms.access(userId, roomId);
+    const id = objectId(fileId);
+    const file = await files.findOne({ _id: id, roomId: room._id });
+    assert(file, 404, 'NOT_FOUND', 'File not found');
+    await ensureCurrentSnapshot(file);
+    const max = limit(query.limit);
+    const before = beforeRevision(query.beforeRevision);
+    const rows = await versions.find({ fileId: id, ...(before === undefined ? {} : { revision: { $lt: before } }) },
+      { projection: { revision: 1, authorId: 1, kind: 1, createdAt: 1, restoredFromRevision: 1 } })
+      .sort({ revision: -1 }).limit(max + 1).toArray();
+    const page = rows.slice(0, max);
+    const authors = await users.find({ _id: { $in: page.map((row) => row.authorId) } }, { projection: { name: 1 } }).toArray();
+    const names = new Map(authors.map((row) => [row._id.toString(), row.name]));
+    return { items: page.map((row) => versionShape(row, names.get(row.authorId.toString()) || 'Former member')),
+      nextBeforeRevision: rows.length > max ? page.at(-1).revision : null };
+  }
+
+  async function version(userId, roomId, fileId, selectedRevision) {
+    const room = await rooms.access(userId, roomId);
+    const row = await versions.findOne({ fileId: objectId(fileId), roomId: room._id, revision: revision(selectedRevision) });
+    assert(row, 404, 'NOT_FOUND', 'Version not found');
+    const author = await users.findOne({ _id: row.authorId }, { projection: { name: 1 } });
+    return { version: versionShape(row, author?.name || 'Former member', true) };
+  }
+
+  async function restore(token, roomId, fileId, selectedRevision, payload) {
+    object(payload, ['operationId', 'expectedRevision']);
+    const room = objectId(roomId), fileIdValue = objectId(fileId), sourceRevision = revision(selectedRevision);
+    const op = operationId(payload.operationId), expected = revision(payload.expectedRevision);
+    const requestHash = createHash('sha256').update(JSON.stringify({ kind: 'restore', sourceRevision, expected })).digest('hex');
+    return queue.run(room.toString(), async () => {
+      const actor = await auth.authenticate(token);
+      await rooms.access(actor.user._id, room, true);
+      const result = await transaction(client, async (session) => {
+        await rooms.access(actor.user._id, room, true, session);
+        const current = await files.findOne({ _id: fileIdValue, roomId: room }, { session });
+        assert(current, 404, 'NOT_FOUND', 'File not found');
+        const prior = await operations.findOne({ fileId: fileIdValue, operationId: op }, { session });
+        if (prior) {
+          assert(prior.authorId.equals(actor.user._id) && prior.requestHash === requestHash, 409, 'OPERATION_ID_REUSED', 'This change ID was already used');
+          return { file: current, committedNow: false };
+        }
+        assert(current.revision === expected, 409, 'REVISION_CONFLICT', 'The file changed. Refresh before restoring.');
+        const source = await versions.findOne({ fileId: fileIdValue, roomId: room, revision: sourceRevision }, { session });
+        assert(source, 404, 'NOT_FOUND', 'Version not found');
+        const now = new Date(), nextRevision = current.revision + 1;
+        const next = { ...current, title: source.title, content: source.content, revision: nextRevision,
+          fieldRevisions: { ...(current.fieldRevisions || {}), '*': nextRevision }, updatedBy: actor.user._id, updatedAt: now };
+        const updated = await files.updateOne({ _id: fileIdValue, roomId: room, revision: current.revision },
+          { $set: { title: next.title, content: next.content, revision: next.revision,
+            fieldRevisions: next.fieldRevisions, updatedBy: next.updatedBy, updatedAt: now } }, { session });
+        assert(updated.matchedCount === 1, 409, 'REVISION_CONFLICT', 'The file changed. Refresh before restoring.');
+        await operations.insertOne({ fileId: fileIdValue, roomId: room, operationId: op, authorId: actor.user._id,
+          requestHash, revision: nextRevision, patch: { action: 'restore', sourceRevision }, createdAt: now }, { session });
+        await versions.insertOne({ fileId: fileIdValue, roomId: room, revision: nextRevision, title: next.title,
+          content: next.content, authorId: actor.user._id, operationId: op, kind: 'restore',
+          restoredFromRevision: sourceRevision, createdAt: now }, { session });
+        return { file: next, committedNow: true };
+      });
+      const file = fileShape(result.file);
+      if (result.committedNow) publish('file:updated', { roomId: room.toString(), file });
+      return { file };
+    });
+  }
+
+  async function contributions(userId, roomId, fileId) {
+    const room = await rooms.access(userId, roomId), id = objectId(fileId);
+    const file = await files.findOne({ _id: id, roomId: room._id });
+    assert(file, 404, 'NOT_FOUND', 'File not found');
+    const [memberRows, activityRows, assignedRows] = await Promise.all([
+      memberships.find({ roomId: room._id }, { projection: { userId: 1 } }).limit(100).toArray(),
+      operations.aggregate([
+        { $match: { fileId: id, 'patch.action': { $ne: 'restore' } } },
+        { $project: { authorId: 1, areaId: file.type === 'document' ? 'document' : file.type === 'sheet' ? 'spreadsheet' : file.type === 'slides'
+          ? { $concat: ['slide:', { $ifNull: ['$patch.slideId', ''] }] }
+          : { $concat: ['page:', { $ifNull: ['$patch.pageId', ''] }] } } },
+        { $group: { _id: { authorId: '$authorId', areaId: '$areaId' }, edits: { $sum: 1 } } },
+      ]).toArray(),
+      assignments.find({ fileId: id }).toArray(),
+    ]);
+    const memberIds = memberRows.map((row) => row.userId);
+    const memberUsers = await users.find({ _id: { $in: memberIds } }, { projection: { name: 1 } }).toArray();
+    const members = memberUsers.map((member) => ({ id: member._id.toString(), name: member.name }));
+    const memberSet = new Set(members.map((member) => member.id));
+    const areaMap = new Map(workAreas(file).map((area) => [area.id, { ...area, assigneeId: null, edits: 0, contributors: {} }]));
+    for (const row of assignedRows) if (areaMap.has(row.areaId) && memberSet.has(row.assigneeId?.toString())) areaMap.get(row.areaId).assigneeId = row.assigneeId.toString();
+    const people = new Map(members.map((member) => [member.id, member.name]));
+    const totals = new Map();
+    for (const row of activityRows) {
+      const areaId = row._id.areaId;
+      const area = areaMap.get(areaId);
+      if (!area) continue;
+      const authorId = row._id.authorId.toString();
+      area.edits += row.edits;
+      area.contributors[authorId] = (area.contributors[authorId] || 0) + row.edits;
+      totals.set(authorId, (totals.get(authorId) || 0) + row.edits);
+    }
+    return { members, areas: [...areaMap.values()].map(({ contributors, ...area }) => ({ ...area,
+      contributors: Object.entries(contributors).map(([id, edits]) => ({ id, name: people.get(id) || 'Former member', edits })).sort((a, b) => b.edits - a.edits) })),
+      contributors: [...totals].map(([id, edits]) => ({ id, name: people.get(id) || 'Former member', edits })).sort((a, b) => b.edits - a.edits) };
+  }
+
+  async function assign(token, roomId, fileId, payload) {
+    object(payload, ['areaId', 'assigneeId']);
+    const id = objectId(roomId), fileObjectId = objectId(fileId);
+    const areaId = string(payload.areaId, 'Work area', 1, 100);
+    assert(payload.assigneeId === null || typeof payload.assigneeId === 'string', 422, 'VALIDATION_FAILED', 'Choose a teammate');
+    const actor = await auth.authenticate(token);
+    const room = await rooms.access(actor.user._id, id);
+    const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
+    assert(file, 404, 'NOT_FOUND', 'File not found');
+    assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
+    const assigneeId = payload.assigneeId === null ? null : objectId(payload.assigneeId);
+    if (assigneeId) {
+      const member = await memberships.findOne({ roomId: room._id, userId: assigneeId });
+      assert(member, 404, 'NOT_FOUND', 'Teammate is not a member of this room');
+    }
+    if (assigneeId) await assignments.updateOne({ fileId: fileObjectId, areaId }, { $set: { roomId: room._id, assigneeId, assignedBy: actor.user._id, updatedAt: new Date() } }, { upsert: true });
+    else await assignments.deleteOne({ fileId: fileObjectId, areaId });
+    return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+  }
+
+  return { listMine, list, get, create, update, history, version, restore, contributions, assign };
 }

@@ -39,6 +39,18 @@ Room shape: `{id,name,ownerId,createdAt}`. Note shape: `{roomId,content,revision
 
 History items: `{revision,authorId,authorName,kind,createdAt,restoredFromRevision}`. Resolve author names from user records with a fallback label if unavailable. Restore requires owner access, reads only a version in the target room, and broadcasts `note:updated` after commit. `appliedRevision` identifies the restored operation; `note` is the latest canonical snapshot at response time and may have a later revision on retry.
 
+## Collaborative files
+
+| Method / path | Input | Success and permission |
+| --- | --- | --- |
+| GET `/rooms/:roomId/files/:fileId/history` | `limit` default 20/max 100, optional `beforeRevision` | 200, metadata-only snapshots; room member |
+| GET `/rooms/:roomId/files/:fileId/history/:revision` | None | 200, `{version}` including file content; room member |
+| POST `/rooms/:roomId/files/:fileId/history/:revision/restore` | `{operationId,expectedRevision}` | 200, `{file}`; room owner only |
+| GET `/rooms/:roomId/files/:fileId/contributions` | None | 200, current areas, member list, and saved edit counts; room member |
+| POST `/rooms/:roomId/files/:fileId/assignments` | `{areaId,assigneeId}` (`assigneeId:null` clears) | 200, updated contribution map; room member |
+
+File versions snapshot document, slide, spreadsheet, or notebook state per committed revision. Restores are append-only and preserve the selected snapshot as a new revision. The contribution map supports one document area, one spreadsheet area, and per-slide/per-notebook-page ownership; saved edits are derived from the server operation log. File history opened on an older file with no snapshot backfills only its current state, since earlier snapshots cannot be reconstructed retroactively.
+
 ## Errors
 
 | HTTP | Code examples | Client behavior |

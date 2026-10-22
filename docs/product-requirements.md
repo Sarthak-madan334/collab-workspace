@@ -12,8 +12,10 @@
 | C06 | Persistence | Acknowledged edits survive reload and backend restart; a failed database write never produces a saved indicator. |
 | C07 | History and restore | Members browse saved revisions and preview their contents; the owner can restore one as a new revision visible to all clients. |
 | C08 | Reconnection | Rejoining fetches current content and membership; an unsent local draft is preserved for review and never replayed over newer content automatically. |
+| C09 | File version history | Documents, presentations, spreadsheets, and notebooks retain saved snapshots; members can preview history and the room owner can restore a snapshot as a new revision. |
+| C10 | Contribution map | Members agree on area ownership and see server-derived saved edits by document, sheet, slide, or notebook page without presenting activity as a performance score. |
 
-C01–C07 implement the five core features in the proposal. C08 makes its reconnect-learning goal and consistency risk concrete. Owner-only restore, invite codes, and plain text are documented implementation decisions.
+C01–C07 implement the proposal’s core features. C08 makes its reconnect-learning goal and consistency risk concrete. C09–C10 extend the workspace with recoverable file versions and agreed ownership visibility. Owner-only restore, invite codes, and plain text are documented implementation decisions.
 
 ## Permissions
 
@@ -24,6 +26,9 @@ C01–C07 implement the five core features in the proposal. C08 makes its reconn
 | Edit note | No | No | Yes | Yes |
 | Read or rotate room invite | No | No | No | Yes |
 | Restore version | No | No | No | Yes |
+| Read file history and contribution map | No | No | Yes | Yes |
+| Assign file area | No | No | Yes | Yes |
+| Restore file version | No | No | No | Yes |
 
 The owner is also a member. Member removal, ownership transfer, room deletion, and viewer roles are not MVP APIs. Rotating an invite prevents new joins using the old code; it does not revoke existing memberships.
 
@@ -51,3 +56,10 @@ No simulation engine, repair optimization, AI integration, or field-map subsyste
 ## Completion gate
 
 All core acceptance cases in [testing](testing-and-validation.md) pass against the deployed Vercel/Render/Atlas environment. The README must then be updated with actual setup commands, implementation status, verified live URLs, and known limitations. Documentation alone does not satisfy the application completion gate.
+# Collaborative files: history and FairShare contribution map
+
+Every document, presentation, spreadsheet, and notebook keeps recoverable snapshots for each saved revision. A room owner can inspect a prior snapshot and restore it; restoration is recorded as a new revision, preserving the current and prior work.
+
+Each file also has an opt-in contribution map. Teammates can agree who owns the document, spreadsheet, an individual slide, or a notebook page. The map shows saved edits by area and contributor so teams can see what has been covered and where ownership is still open. Counts represent saved activity only and must not be presented as a measure of quality, effort, or performance.
+
+The first implementation uses whole-document and whole-sheet areas, individual slides and notebook pages, room membership checks, owner-only restore, and server-derived operation counts. Earlier edits made before file history was enabled cannot be reconstructed; opening history on such a file records its current state as the available baseline.

@@ -12,6 +12,10 @@ import {
   RefreshCw,
   Users,
   Copy,
+  History,
+  FileClock,
+  ArrowRight,
+  Check,
 } from 'lucide-react';
 import { fileApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
@@ -959,7 +963,16 @@ function SheetEditor({ file, read, edit, commit }) {
   );
 }
 
-export function FileEditor({ token }) {
+function versionPreviewText(type, version) {
+  const content = version.content || {};
+  if (type === 'document') return content.body || 'This version has no text yet.';
+  if (type === 'slides') return (content.slides || []).map((slide, index) => `${index + 1}. ${slide.title || 'Untitled slide'}\n${slide.body || 'No slide text'}`).join('\n\n') || 'No slides in this version.';
+  if (type === 'notebook') return (content.pages || []).map((page) => `${page.title || 'Untitled page'}\n${page.body || 'No page text'}`).join('\n\n') || 'No pages in this version.';
+  const cells = Object.entries(content.cells || {});
+  return cells.length ? cells.map(([cell, value]) => `${cell}\t${value}`).join('\n') : 'This spreadsheet version has no cell values.';
+}
+
+export function FileEditor({ token, userId }) {
   const { roomId, fileId } = useParams();
   const [file, setFile] = useState(null);
   const [drafts, setDrafts] = useState({});
@@ -967,6 +980,13 @@ export function FileEditor({ token }) {
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(null);
   const [invite, setInvite] = useState('');
+  const [roomOwnerId, setRoomOwnerId] = useState(null);
+  const [filePanel, setFilePanel] = useState('');
+  const [fileHistory, setFileHistory] = useState([]);
+  const [previewVersion, setPreviewVersion] = useState(null);
+  const [contributionMap, setContributionMap] = useState(null);
+  const [panelBusy, setPanelBusy] = useState(false);
+  const [panelError, setPanelError] = useState('');
   const draftRef = useRef({});
   const timerRef = useRef({});
   const savingRef = useRef(Promise.resolve());
@@ -988,6 +1008,11 @@ export function FileEditor({ token }) {
     setDrafts({});
     setConflict(null);
     setError('');
+    setRoomOwnerId(null);
+    setFilePanel('');
+    setFileHistory([]);
+    setPreviewVersion(null);
+    setContributionMap(null);
     setStatus('Loading…');
     draftRef.current = {};
     savingRef.current = Promise.resolve();
@@ -1002,6 +1027,7 @@ export function FileEditor({ token }) {
       .catch((failure) => {
         if (alive) setError(failure.message);
       });
+    roomApi.get(token, roomId).then(({ room }) => { if (alive) setRoomOwnerId(room.ownerId); }).catch(() => {});
     return () => {
       alive = false;
       Object.values(timerRef.current).forEach(clearTimeout);
@@ -1120,6 +1146,44 @@ export function FileEditor({ token }) {
       setError(failure.message);
     }
   };
+  const openFilePanel = async (panel) => {
+    if (filePanel === panel) { setFilePanel(''); return; }
+    setFilePanel(panel); setPanelError(''); setPreviewVersion(null); setPanelBusy(true);
+    try {
+      if (panel === 'history') setFileHistory((await fileApi.history(token, roomId, fileId)).items || []);
+      else setContributionMap(await fileApi.contributions(token, roomId, fileId));
+    } catch (failure) { setPanelError(failure.message); }
+    finally { setPanelBusy(false); }
+  };
+  const previewFileVersion = async (item) => {
+    setPanelBusy(true); setPanelError('');
+    try { setPreviewVersion((await fileApi.version(token, roomId, fileId, item.revision)).version); }
+    catch (failure) { setPanelError(failure.message); }
+    finally { setPanelBusy(false); }
+  };
+  const restoreFileVersion = async () => {
+    if (!previewVersion || roomOwnerId !== userId) return;
+    if (!window.confirm(`Restore version ${previewVersion.revision}? This will create a new saved revision.`)) return;
+    if (conflict) { setPanelError('Resolve the pending edit before restoring a version.'); return; }
+    Object.keys(draftRef.current).forEach((key) => { clearTimeout(timerRef.current[key]); save(key); });
+    await savingRef.current;
+    if (Object.keys(draftRef.current).length) { setPanelError('Your latest edits could not be saved. Retry before restoring.'); return; }
+    setPanelBusy(true); setPanelError('');
+    try {
+      const { file: restored } = await fileApi.restore(token, roomId, fileId, previewVersion.revision, crypto.randomUUID(), fileRef.current.revision);
+      receive(restored); setStatus('Restored version'); setPreviewVersion(null);
+      setFileHistory((items) => [{ revision: restored.revision, authorId: userId, authorName: 'You', kind: 'restore', restoredFromRevision: previewVersion.revision, createdAt: restored.updatedAt }, ...items]);
+    } catch (failure) {
+      setPanelError(failure.message);
+      if (failure.status === 409) { const latest = await fileApi.get(token, roomId, fileId).catch(() => null); if (latest?.file) receive(latest.file); }
+    } finally { setPanelBusy(false); }
+  };
+  const assignArea = async (areaId, assigneeId) => {
+    setPanelBusy(true); setPanelError('');
+    try { setContributionMap(await fileApi.assign(token, roomId, fileId, areaId, assigneeId || null)); }
+    catch (failure) { setPanelError(failure.message); }
+    finally { setPanelBusy(false); }
+  };
   if (error && !file)
     return (
       <main className="wf-page">
@@ -1151,6 +1215,12 @@ export function FileEditor({ token }) {
           <span className="wf-status" role="status">
             {status}
           </span>
+          <button className={`wf-share ${filePanel === 'history' ? 'is-active' : ''}`} type="button" onClick={() => openFilePanel('history')} aria-expanded={filePanel === 'history'} aria-controls="file-detail-panel">
+            <History size={16} /> History
+          </button>
+          <button className={`wf-share ${filePanel === 'contributions' ? 'is-active' : ''}`} type="button" onClick={() => openFilePanel('contributions')} aria-expanded={filePanel === 'contributions'} aria-controls="file-detail-panel">
+            <Users size={16} /> Contributions
+          </button>
           <button className="wf-share" type="button" onClick={showInvite}>
             <Users size={16} /> Share
           </button>
@@ -1168,6 +1238,13 @@ export function FileEditor({ token }) {
           </button>
         </div>
       )}
+      {filePanel && <section id="file-detail-panel" className="wf-file-panel glass-panel" aria-label={filePanel === 'history' ? 'File version history' : 'Contribution map'}>
+        <div className="wf-file-panel-head"><div><span className="section-kicker">{filePanel === 'history' ? 'RECOVERABLE WORK' : 'SHARED OWNERSHIP'}</span><h2>{filePanel === 'history' ? 'Version history' : 'FairShare · Contribution map'}</h2><p>{filePanel === 'history' ? 'Preview saved work and restore an earlier version.' : 'Agree who owns each part, then see saved edits by area.'}</p></div><button type="button" className="wf-panel-close" onClick={() => setFilePanel('')} aria-label="Close panel"><X size={17} /></button></div>
+        {panelError && <p className="wf-error" role="alert">{panelError}</p>}
+        {panelBusy && <p className="wf-panel-loading" role="status">Loading…</p>}
+        {filePanel === 'history' && !panelBusy && (previewVersion ? <div className="wf-version-preview"><button className="wf-history-back" type="button" onClick={() => setPreviewVersion(null)}><ArrowLeft size={14} /> All versions</button><div className="wf-version-meta"><strong>Version {previewVersion.revision}{previewVersion.kind === 'restore' ? ' · Restored' : ''}</strong><span>{previewVersion.authorName || 'A teammate'} · {new Date(previewVersion.createdAt).toLocaleString()}</span></div><pre>{versionPreviewText(file.type, previewVersion)}</pre>{roomOwnerId === userId && <button className="wf-share wf-restore-action" type="button" onClick={restoreFileVersion} disabled={panelBusy}><RefreshCw size={15} /> Restore this version</button>}</div> : <div className="wf-history-list">{fileHistory.map((item) => <button className="wf-history-row" type="button" key={item.revision} onClick={() => previewFileVersion(item)}><span className="wf-history-icon">{item.kind === 'restore' ? <RefreshCw size={15} /> : <FileClock size={15} />}</span><span><strong>Version {item.revision}{item.revision === file.revision ? <small> CURRENT</small> : ''}</strong><em>{item.authorName} · {new Date(item.createdAt).toLocaleString()}</em></span><ArrowRight size={15} /></button>)}{!fileHistory.length && <p className="wf-panel-loading">No saved versions yet.</p>}</div>)}
+        {filePanel === 'contributions' && contributionMap && !panelBusy && <div className="wf-contribution-list"><div className="wf-contribution-summary"><span><strong>{contributionMap.areas.filter((area) => area.assigneeId).length}</strong> of {contributionMap.areas.length} areas assigned</span><span><strong>{contributionMap.contributors.reduce((sum, person) => sum + person.edits, 0)}</strong> saved edits tracked</span></div>{contributionMap.areas.map((area) => <article className="wf-contribution-row" key={area.id}><div className="wf-contribution-area"><strong>{area.label}</strong><span>{area.edits} saved {area.edits === 1 ? 'edit' : 'edits'}{area.contributors.length ? ` · ${area.contributors.map((person) => `${person.name} ${person.edits}`).join(', ')}` : ' · No edits yet'}</span></div><label><span className="sr-only">Owner for {area.label}</span><select value={area.assigneeId || ''} onChange={(event) => assignArea(area.id, event.target.value)} disabled={panelBusy}><option value="">Unassigned</option>{contributionMap.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select>{area.assigneeId && <Check size={15} aria-hidden="true" />}</label></article>)}{!contributionMap.areas.length && <p className="wf-panel-loading">Add a slide or page to map its ownership.</p>}<p className="wf-contribution-note">Saved edit counts show activity, not quality or effort.</p></div>}
+      </section>}
       {error && (
         <p className="wf-error" role="alert">
           {error}{' '}

@@ -109,6 +109,17 @@ test('document edits preserve the original object and reject stale changes', () 
   });
 });
 
+test('a restored file revision conflicts with drafts based on any older part revision', () => {
+  const file = makeFile('document');
+  file.revision = 3;
+  file.fieldRevisions = { 'document:body': 1, 'document:format:font': 2, '*': 3 };
+  assert.throws(() => applyFilePatch(file, { action: 'setFormat', field: 'font', value: 'Georgia' }, 2), {
+    code: 'REVISION_CONFLICT',
+  });
+  const currentDraft = applyFilePatch(file, { action: 'setFormat', field: 'font', value: 'Georgia' }, 3);
+  assert.equal(currentDraft.revision, 4);
+});
+
 test('a sheet cannot exceed the stored-file byte limit', () => {
   const file = makeFile('sheet');
   file.content.cells = Object.fromEntries(

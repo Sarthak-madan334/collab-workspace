@@ -1213,7 +1213,7 @@ function RoomPage() {
 function NotFound() { return <AppFrame><div className="not-found glass-panel"><span className="section-kicker">NOT THIS WAY</span><h1>This page got lost.</h1><p>Let’s get you back to your team's spaces.</p><Link className="button button-primary" to="/dashboard">Back to workspace <ArrowRight size={15} /></Link></div></AppFrame>; }
 
 function StudioHomeRoute() { const { session } = useSession(); return <StudioHome token={session.token} />; }
-function FileEditorRoute() { const { session } = useSession(); return <FileEditor token={session.token} />; }
+function FileEditorRoute() { const { session } = useSession(); return <FileEditor token={session.token} userId={session.user.id} />; }
 
 const REPOSITORY_URL = 'https://github.com/Sarthak-madan334/collab-workspace';
 

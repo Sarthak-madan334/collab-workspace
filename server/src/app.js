@@ -108,6 +108,22 @@ export function createApp(config, { db, auth, rooms, notes, files, limiter, read
     limiter.check(`file-edit:${request.actor.user._id}:${request.params.roomId}`, 120, 60 * 1000);
     return files.update(request.token, request.params.roomId, request.params.fileId, request.body);
   }));
+  app.get('/api/v1/rooms/:roomId/files/:fileId/history', route((request) => {
+    exactQuery(request.query, ['limit', 'beforeRevision']);
+    return files.history(request.actor.user._id, request.params.roomId, request.params.fileId, request.query);
+  }));
+  app.get('/api/v1/rooms/:roomId/files/:fileId/history/:revision', route((request) =>
+    files.version(request.actor.user._id, request.params.roomId, request.params.fileId, revisionParam(request.params.revision))));
+  app.post('/api/v1/rooms/:roomId/files/:fileId/history/:revision/restore', route((request) => {
+    limiter.check(`file-restore:${request.actor.user._id}:${request.params.roomId}`, 20, 60 * 1000);
+    return files.restore(request.token, request.params.roomId, request.params.fileId, revisionParam(request.params.revision), request.body);
+  }));
+  app.get('/api/v1/rooms/:roomId/files/:fileId/contributions', route((request) => {
+    exactQuery(request.query, []);
+    return files.contributions(request.actor.user._id, request.params.roomId, request.params.fileId);
+  }));
+  app.post('/api/v1/rooms/:roomId/files/:fileId/assignments', route((request) =>
+    files.assign(request.token, request.params.roomId, request.params.fileId, request.body)));
   app.get('/api/v1/rooms/:roomId/invite', route((request) => rooms.invite(request.actor.user._id, request.params.roomId)));
   app.post('/api/v1/rooms/:roomId/invite/rotate', route((request) => {
     limiter.check(`invite:${request.actor.user._id}`, 10, 60 * 1000);

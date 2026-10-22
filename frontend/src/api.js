@@ -4,7 +4,7 @@ import {
   demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
 } from './demo.js';
 import { IS_ANDROID } from './native-session.js';
-import { demoFileCreate, demoFileGet, demoFileList, demoFileListMine, demoFileUpdate } from './file-demo.js';
+import { demoFileAssign, demoFileContributions, demoFileCreate, demoFileGet, demoFileHistory, demoFileList, demoFileListMine, demoFileRestore, demoFileUpdate, demoFileVersion } from './file-demo.js';
 
 export class ApiError extends Error {
   constructor(message, code, status) {
@@ -124,4 +124,9 @@ export const fileApi = {
   update: (token, roomId, fileId, change) => DEMO_MODE && token === DEMO_TOKEN
     ? Promise.resolve(demoFileUpdate(roomId, fileId, change))
     : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/ops`, { token, method: 'POST', body: JSON.stringify(change) }),
+  history: (token, roomId, fileId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileHistory(roomId, fileId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/history?limit=30`, { token }),
+  version: (token, roomId, fileId, revision) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileVersion(roomId, fileId, revision)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/history/${revision}`, { token }),
+  restore: (token, roomId, fileId, revision, operationId, expectedRevision) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileRestore(roomId, fileId, revision, operationId, expectedRevision)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/history/${revision}/restore`, { token, method: 'POST', body: JSON.stringify({ operationId, expectedRevision }) }),
+  contributions: (token, roomId, fileId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileContributions(roomId, fileId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/contributions`, { token }),
+  assign: (token, roomId, fileId, areaId, assigneeId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileAssign(roomId, fileId, areaId, assigneeId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/assignments`, { token, method: 'POST', body: JSON.stringify({ areaId, assigneeId }) }),
 };

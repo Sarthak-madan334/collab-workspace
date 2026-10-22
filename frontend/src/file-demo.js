@@ -1,6 +1,7 @@
 import { DEMO_USER, demoRoom } from './demo.js';
 
 const STORAGE_KEY = 'synkro.demo.files.v1';
+const HISTORY_KEY = 'synkro.demo.file-history.v1';
 const read = () => {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -75,6 +76,8 @@ export function demoFileCreate(roomId, type, title) {
   if (Object.values(files).filter((item) => item.roomId === roomId).length >= 50)
     throw new Error('This room already has 50 files.');
   write({ ...files, [file.id]: file });
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...history, [file.id]: [{ revision: 0, title: file.title, content: file.content, authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'initial', createdAt: now }] }));
   const { fieldRevisions: _fields, ...publicFile } = file;
   return { file: publicFile };
 }
@@ -177,6 +180,69 @@ export function demoFileUpdate(roomId, fileId, { baseRevision, patch }) {
     updatedBy: DEMO_USER.id,
   };
   write({ ...files, [fileId]: next });
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  const snapshots = history[fileId] || [];
+  if (!snapshots.some((item) => item.revision === next.revision)) {
+    snapshots.push({ revision: next.revision, title: next.title, content: next.content, authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'edit', createdAt: next.updatedAt });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...history, [fileId]: snapshots }));
+  }
   const { fieldRevisions: _fields, ...publicFile } = next;
   return { file: publicFile };
+}
+
+export function demoFileHistory(roomId, fileId) {
+  const file = read()[fileId];
+  if (!file || file.roomId !== roomId) throw new Error('File not found.');
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  let snapshots = history[fileId];
+  if (!snapshots?.length) {
+    snapshots = [{ revision: file.revision, title: file.title, content: file.content, authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'baseline', createdAt: file.updatedAt }];
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...history, [fileId]: snapshots }));
+  }
+  return { items: snapshots.slice().sort((a, b) => b.revision - a.revision).map(({ content: _content, title: _title, ...row }) => row) };
+}
+
+export function demoFileVersion(roomId, fileId, revision) {
+  demoFileHistory(roomId, fileId);
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  const version = history[fileId]?.find((item) => Number(item.revision) === Number(revision));
+  if (!version) throw new Error('Version not found.');
+  return { version };
+}
+
+export function demoFileRestore(roomId, fileId, revision, _operationId, expectedRevision) {
+  const { version } = demoFileVersion(roomId, fileId, revision);
+  const files = read(), file = files[fileId];
+  if (Number(file.revision) !== Number(expectedRevision)) { const failure = new Error('The file changed. Refresh before restoring.'); failure.status = 409; failure.code = 'REVISION_CONFLICT'; throw failure; }
+  const now = new Date().toISOString();
+  const next = { ...file, title: version.title, content: structuredClone(version.content), revision: file.revision + 1, updatedAt: now, updatedBy: DEMO_USER.id, fieldRevisions: { ...(file.fieldRevisions || {}), '*': file.revision + 1 } };
+  write({ ...files, [fileId]: next });
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+  const snapshots = [...(history[fileId] || []), { revision: next.revision, title: next.title, content: next.content, authorId: DEMO_USER.id, authorName: DEMO_USER.name, kind: 'restore', restoredFromRevision: Number(revision), createdAt: now }];
+  localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...history, [fileId]: snapshots }));
+  const { fieldRevisions: _fields, ...publicFile } = next;
+  return { file: publicFile };
+}
+
+export function demoFileContributions(roomId, fileId) {
+  const { items } = demoFileHistory(roomId, fileId);
+  const file = read()[fileId];
+  const areas = file.type === 'slides' ? (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title || 'Untitled slide' })) : file.type === 'notebook' ? (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title || 'Untitled page' })) : [{ id: file.type === 'document' ? 'document' : 'spreadsheet', label: file.type === 'document' ? 'Document' : 'Spreadsheet' }];
+  const snapshots = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}')[fileId] || [];
+  const assignments = JSON.parse(localStorage.getItem('synkro.demo.file-assignments.v1') || '{}')[fileId] || {};
+  const editCount = snapshots.filter((row) => row.kind !== 'initial').length;
+  const areasWithEdits = areas.map((area) => ({ ...area, assigneeId: assignments[area.id] || null, edits: editCount, contributors: editCount ? [{ id: DEMO_USER.id, name: DEMO_USER.name, edits: editCount }] : [] }));
+  return { members: [{ id: DEMO_USER.id, name: DEMO_USER.name }], areas: areasWithEdits, contributors: [{ id: DEMO_USER.id, name: DEMO_USER.name, edits: snapshots.filter((row) => row.kind !== 'initial').length }] };
+}
+
+export function demoFileAssign(roomId, fileId, areaId, assigneeId) {
+  const data = demoFileContributions(roomId, fileId);
+  const files = read(), file = files[fileId];
+  if (!data.areas.some((area) => area.id === areaId)) throw new Error('Work area no longer exists.');
+  const assignments = JSON.parse(localStorage.getItem('synkro.demo.file-assignments.v1') || '{}');
+  assignments[fileId] ||= {};
+  assignments[fileId][areaId] = assigneeId;
+  localStorage.setItem('synkro.demo.file-assignments.v1', JSON.stringify(assignments));
+  data.areas = data.areas.map((area) => ({ ...area, assigneeId: assignments[fileId][area.id] || null }));
+  return data;
 }

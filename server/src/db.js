@@ -23,6 +23,9 @@ export async function connectDatabase(config) {
       db.collection('versions').createIndex({ roomId: 1, operationId: 1 }, { unique: true }),
       db.collection('files').createIndex({ roomId: 1, updatedAt: -1 }),
       db.collection('fileOperations').createIndex({ fileId: 1, operationId: 1 }, { unique: true }),
+      db.collection('fileVersions').createIndex({ fileId: 1, revision: -1 }, { unique: true }),
+      db.collection('fileVersions').createIndex({ fileId: 1, operationId: 1 }, { unique: true }),
+      db.collection('fileAssignments').createIndex({ fileId: 1, areaId: 1 }, { unique: true }),
     ]);
     return { client, db };
   } catch (err) {
