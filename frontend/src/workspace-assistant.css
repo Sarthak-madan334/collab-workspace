@@ -1,20 +1,21 @@
 .wa-scrim {
   position: fixed;
   z-index: 1001;
-  inset: 0;
+  inset: 86px 16px 16px;
   display: flex;
   justify-content: flex-end;
   background: rgba(0, 0, 0, .66);
   backdrop-filter: blur(5px);
 }
 .wa-panel {
-  width: min(480px, 100%);
+  width: min(410px, 100%);
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   color: var(--text);
-  border-left: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 20px;
   background: #111413;
   box-shadow: -24px 0 70px rgba(0, 0, 0, .4);
   animation: wa-enter .24s cubic-bezier(.2, .8, .2, 1) both;
@@ -101,8 +102,8 @@
 .wa-composer-foot .button { min-height: 34px; padding: 0 12px; font-size: 10px; }
 .wa-footer { flex: 0 0 auto; padding: 11px 20px; color: #747c72; border-top: 1px solid var(--line); font-size: 9px; }
 @media (max-width: 600px) {
-  .wa-scrim { align-items: stretch; }
-  .wa-panel { width: 100%; height: 100dvh; border-left: 0; animation-name: wa-mobile-enter; }
+  .wa-scrim { inset: calc(env(safe-area-inset-top) + 72px) 10px calc(env(safe-area-inset-bottom) + 10px); }
+  .wa-panel { width: 100%; height: 100%; border-radius: 18px; animation-name: wa-mobile-enter; }
   @keyframes wa-mobile-enter { from { opacity: .65; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   .wa-header { min-height: 70px; padding: 13px 16px; }
   .wa-tabs { padding: 0 14px; }
