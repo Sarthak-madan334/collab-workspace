@@ -5,7 +5,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi,
+  LockKeyhole, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi, Code2,
   Palette, X, Zap,
 } from 'lucide-react';
 import { authApi, fileApi, roomApi } from './api.js';
@@ -824,12 +824,13 @@ function Dashboard() {
               { id: 'notebook', label: 'Notebook', detail: 'Organize notes into pages', Icon: NotebookTabs },
               { id: 'slides', label: 'Presentation', detail: 'Build and present a deck', Icon: Presentation },
               { id: 'sheet', label: 'Spreadsheet', detail: 'Track work in a grid', Icon: Table2 },
+              { id: 'code', label: 'Code workspace', detail: 'Write and run Python or C++', Icon: Code2 },
             ].map(({ id, label, detail, Icon }) => <button key={id} type="button" className={`create-kind-option${createKind === id ? ' selected' : ''}`} aria-pressed={createKind === id} onClick={() => setCreateKind(id)}><Icon size={19} /><span><strong>{label}</strong><small>{detail}</small></span><span className="create-kind-check" aria-hidden="true">{createKind === id ? '✓' : ''}</span></button>)}
           </div>
-          <label className="field-label">{createKind === 'room' ? 'Room name' : `${createKind === 'slides' ? 'Presentation' : createKind[0].toUpperCase() + createKind.slice(1)} name`}<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required minLength={1} maxLength={80} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder={createKind === 'room' ? 'e.g. Product studio' : `e.g. ${createKind === 'slides' ? 'Product launch' : 'Team project'}`} /></div></label>
+          <label className="field-label">{createKind === 'room' ? 'Room name' : `${({ slides: 'Presentation', sheet: 'Spreadsheet', code: 'Code workspace' })[createKind] || createKind[0].toUpperCase() + createKind.slice(1)} name`}<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required minLength={1} maxLength={80} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder={createKind === 'room' ? 'e.g. Product studio' : `e.g. ${({ slides: 'Product launch', sheet: 'Quarterly plan', notebook: 'Team notes', document: 'Project brief', code: 'Python practice' })[createKind] || 'Team project'}`} /></div></label>
         </> : <label className="field-label">Invite code<div className="input-wrap"><KeyRound size={16} /><input autoFocus required value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Paste your invite code" /></div></label>}
         {message && <div className="form-error" role="alert">{message}</div>}
-        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating…' : 'Joining room…'} /> : <>{dialog === 'create' ? createKind === 'room' ? 'Create room' : `Create ${createKind === 'slides' ? 'presentation' : createKind}` : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
+        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating…' : 'Joining room…'} /> : <>{dialog === 'create' ? createKind === 'room' ? 'Create room' : `Create ${({ slides: 'presentation', sheet: 'spreadsheet', notebook: 'notebook', document: 'document', code: 'code workspace' })[createKind] || createKind}` : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
       </form>
     </Modal>}
   </>;
