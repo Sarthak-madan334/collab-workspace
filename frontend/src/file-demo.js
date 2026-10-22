@@ -23,7 +23,7 @@ export function demoFileList(roomId) {
 }
 export function demoFileListMine() {
   return Object.values(read())
-    .filter((file) => demoRoom(file.roomId)?.kind === 'file')
+    .filter((file) => Boolean(demoRoom(file.roomId)))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .map(({ content: _content, fieldRevisions: _fields, ...summary }) => summary);
 }

@@ -19,8 +19,9 @@ Comments, editor/viewer permissions, and CRDT merging are optional stretch featu
 | `/` | Redirect to dashboard if signed in, otherwise login. |
 | `/register` | Name, email, password, validation, submission status. |
 | `/login` | Email/password form and generic authentication errors. |
-| `/dashboard` | Member rooms, create-room form, join-by-code form, empty/loading/error states. |
-| `/rooms/:roomId` | Room title, member presence, editor, save/connection status, history drawer; owner invite controls. |
+| `/dashboard` | Member rooms, including legacy file spaces; create-room/file form, join-by-code form, empty/loading/error states. |
+| `/rooms/:roomId` | Room title, member presence, shared note, files list with an add-file action, save/connection status, history drawer; owner invite controls. |
+| `/studio/:roomId/:fileId` | Standalone collaborative document, notebook, presentation, spreadsheet, or Python/C++ workspace. |
 | Unknown route | Accessible not-found screen with dashboard link. |
 
 The history drawer lists revision, author, server timestamp, and type. Selecting a version shows a read-only preview. Only the owner sees restore controls, but the server remains authoritative. Confirm restore with its version number and the warning that it replaces the current note.

@@ -19,15 +19,15 @@ Public user shape is `{id,name}`; `/auth/me` may additionally return that user's
 
 | Method / path | Input | Success and permission |
 | --- | --- | --- |
-| GET `/rooms` | `limit` default 20/max 100, optional opaque `cursor` | 200, `{items,nextCursor}`; own memberships only; stable `(joinedAt,id)` ordering |
-| POST `/rooms` | `{name}` | 201, `{room,inviteCode}`; authenticated creator becomes owner |
+| GET `/rooms` | `limit` default 20/max 100, optional opaque `cursor` | 200, `{items,nextCursor}`; all owned and joined rooms, including file spaces; stable `(joinedAt,id)` ordering |
+| POST `/rooms` | `{name,kind?}` (`kind` is `room` or `file`) | 201, `{room,inviteCode}`; authenticated creator becomes owner |
 | POST `/rooms/join` | `{inviteCode}` | 200, `{room}`; repeat membership join is idempotent |
 | GET `/rooms/:roomId` | None | 200, `{room}`; member only |
 | GET `/rooms/:roomId/invite` | None | 200, `{inviteCode}`; owner only |
 | POST `/rooms/:roomId/invite/rotate` | None | 200, `{inviteCode}`; owner only; old invite stops admitting new members |
 | GET `/rooms/:roomId/note` | None | 200, `{note}`; member only |
 
-Room shape: `{id,name,ownerId,createdAt}`. Note shape: `{roomId,content,revision,updatedBy,updatedAt}`. `updatedBy` is a user ID. Do not embed invite codes in general room or dashboard responses. There is no REST edit endpoint in core; Socket.IO owns normal edits.
+Room shape: `{id,name,kind,ownerId,createdAt}`. Note shape: `{roomId,content,revision,updatedBy,updatedAt}`. `updatedBy` is a user ID. Do not embed invite codes in general room or dashboard responses. There is no REST edit endpoint in core; Socket.IO owns normal edits.
 
 ## History
 
@@ -43,6 +43,11 @@ History items: `{revision,authorId,authorName,kind,createdAt,restoredFromRevisio
 
 | Method / path | Input | Success and permission |
 | --- | --- | --- |
+| GET `/files` | None | 200, `{items}`; files in rooms the user belongs to |
+| GET `/rooms/:roomId/files` | None | 200, `{items}`; room member |
+| POST `/rooms/:roomId/files` | `{type,title}` | 201, `{file}`; room member, up to 50 files per room |
+| GET `/rooms/:roomId/files/:fileId` | None | 200, `{file}`; room member |
+| POST `/rooms/:roomId/files/:fileId/ops` | `{operationId,baseRevision,patch}` | 200, updated `{file}`; room member |
 | GET `/rooms/:roomId/files/:fileId/history` | `limit` default 20/max 100, optional `beforeRevision` | 200, metadata-only snapshots; room member |
 | GET `/rooms/:roomId/files/:fileId/history/:revision` | None | 200, `{version}` including file content; room member |
 | POST `/rooms/:roomId/files/:fileId/history/:revision/restore` | `{operationId,expectedRevision}` | 200, `{file}`; room owner only |

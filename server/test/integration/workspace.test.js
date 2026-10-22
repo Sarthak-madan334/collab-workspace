@@ -93,11 +93,11 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.equal(fileSpace.status, 201);
   const notebook = await request(`/rooms/${fileSpace.data.room.id}/files`, 'POST', alice.token, { type: 'notebook', title: 'Team notebook' });
   assert.equal(notebook.status, 201);
-  assert.equal((await request('/files', 'GET', alice.token)).data.items[0].type, 'notebook');
-  assert.equal((await request('/files', 'GET', bob.token)).data.items.length, 0);
-  assert.equal((await request('/rooms?limit=100', 'GET', alice.token)).data.items.some((item) => item.id === fileSpace.data.room.id), false);
+  assert.equal((await request('/files', 'GET', alice.token)).data.items.some((item) => item.id === notebook.data.file.id), true);
+  assert.equal((await request('/files', 'GET', bob.token)).data.items.some((item) => item.id === sheetId), true);
+  assert.equal((await request('/rooms?limit=100', 'GET', alice.token)).data.items.some((item) => item.id === fileSpace.data.room.id), true);
   assert.equal((await request('/rooms/join', 'POST', bob.token, { inviteCode: fileSpace.data.inviteCode })).data.room.kind, 'file');
-  assert.equal((await request('/files', 'GET', bob.token)).data.items[0].id, notebook.data.file.id);
+  assert.equal((await request('/files', 'GET', bob.token)).data.items.some((item) => item.id === notebook.data.file.id), true);
   const connect = async (token) => {
     const socket = createClient(base, { auth: { token }, transports: ['websocket'], extraHeaders: { Origin: 'http://localhost:5173' } });
     await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });

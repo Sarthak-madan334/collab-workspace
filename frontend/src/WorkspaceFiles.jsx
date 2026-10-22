@@ -102,7 +102,7 @@ export function StudioHome({ token }) {
     setBusy(true);
     setError('');
     try {
-      const { room } = await roomApi.create(token, title.trim(), 'file');
+      const { room } = await roomApi.create(token, title.trim(), 'room');
       const { file } = await fileApi.create(token, room.id, type, title.trim());
       navigate(`/studio/${room.id}/${file.id}`);
     } catch (failure) {
@@ -116,13 +116,7 @@ export function StudioHome({ token }) {
     setBusy(true);
     try {
       const { room } = await roomApi.join(token, inviteCode.trim());
-      if (room.kind !== 'file') {
-        navigate(`/rooms/${room.id}`);
-        return;
-      }
-      const { items: roomFiles } = await fileApi.list(token, room.id);
-      if (!roomFiles.length) throw new Error('This file is not ready yet. Try again shortly.');
-      navigate(`/studio/${room.id}/${roomFiles[0].id}`);
+      navigate(`/rooms/${room.id}`);
     } catch (failure) {
       setError(failure.message);
       setBusy(false);

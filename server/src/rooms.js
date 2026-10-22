@@ -89,7 +89,7 @@ export function createRoomService(db, client, auth, queue) {
   async function list(userId, query) {
     const max = limit(query.limit);
     const cursor = roomCursor(query.cursor);
-    const filter = { userId: typeof userId === 'string' ? objectId(userId) : userId, kind: { $ne: 'file' } };
+    const filter = { userId: typeof userId === 'string' ? objectId(userId) : userId };
     if (cursor) filter.$or = [
       { joinedAt: { $lt: cursor.joinedAt } },
       { joinedAt: cursor.joinedAt, _id: { $lt: cursor.id } },

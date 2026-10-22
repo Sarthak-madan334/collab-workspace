@@ -753,7 +753,7 @@ function Dashboard() {
   const createRoom = async (event) => {
     event.preventDefault(); setBusyAction('create'); setMessage('');
     try {
-      const result = await roomApi.create(session.token, roomName.trim(), createKind === 'room' ? 'room' : 'file');
+      const result = await roomApi.create(session.token, roomName.trim(), 'room');
       const room = result.room || result;
       if (createKind === 'room') {
         setRooms((current) => [room, ...current.filter((item) => item.id !== room.id)]);
@@ -770,7 +770,7 @@ function Dashboard() {
   };
   const joinRoom = async (event) => {
     event.preventDefault(); setBusyAction('join'); setMessage('');
-    try { const result = await roomApi.join(session.token, inviteCode.trim()); const room = result.room || result; setDialog(''); navigate(room.kind === 'file' ? '/studio' : `/rooms/${room.id}`); }
+    try { const result = await roomApi.join(session.token, inviteCode.trim()); const room = result.room || result; setDialog(''); navigate(`/rooms/${room.id}`); }
     catch (err) { setMessage(err.message); }
     finally { setBusyAction(''); }
   };
@@ -838,9 +838,10 @@ function Dashboard() {
 
 function RoomCard({ room, index }) {
   const colors = ['lime', 'violet', 'blue', 'orange'];
+  const isFileSpace = room.kind === 'file';
   return <Link className={`room-card glass-panel room-tone-${colors[index % colors.length]}`} to={`/rooms/${room.id}`}>
-    <div className="room-card-top"><span className="room-glyph"><FileClock size={17} /></span><span className="room-card-more"><MoreHorizontal size={18} /></span></div>
-    <div className="room-card-body"><span className="room-label">SHARED ROOM</span><h3>{room.name}</h3><p>Open your team's shared notes</p></div>
+    <div className="room-card-top"><span className="room-glyph">{isFileSpace ? <FileText size={17} /> : <FileClock size={17} />}</span><span className="room-card-more"><MoreHorizontal size={18} /></span></div>
+    <div className="room-card-body"><span className="room-label">{isFileSpace ? 'FILE SPACE' : 'SHARED ROOM'}</span><h3>{room.name}</h3><p>{isFileSpace ? 'Open shared documents and files' : 'Open your team’s shared workspace'}</p></div>
     <div className="room-card-footer"><span className="room-meta"><Users size={14} /> Shared space</span><span className="room-open">Open room <ArrowUpRight size={14} /></span></div>
   </Link>;
 }
@@ -895,6 +896,12 @@ function RoomPage() {
   const [connection, setConnection] = useState('connecting');
   const [saveState, setSaveState] = useState('saved');
   const [pageError, setPageError] = useState('');
+  const [roomFiles, setRoomFiles] = useState([]);
+  const [roomFilesError, setRoomFilesError] = useState('');
+  const [roomFileDialog, setRoomFileDialog] = useState(false);
+  const [roomFileType, setRoomFileType] = useState('document');
+  const [roomFileTitle, setRoomFileTitle] = useState('');
+  const [roomFileBusy, setRoomFileBusy] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
@@ -914,6 +921,36 @@ function RoomPage() {
   const dirty = draft !== (note?.content ?? '');
   draftRef.current = draft;
   noteRef.current = note;
+
+  const refreshRoomFiles = useCallback(async () => {
+    try {
+      const result = await fileApi.list(session.token, roomId);
+      setRoomFiles(result.items || []);
+      setRoomFilesError('');
+    } catch (error) {
+      setRoomFilesError(error.message || 'Files in this room could not be loaded.');
+    }
+  }, [roomId, session.token]);
+
+  useEffect(() => { refreshRoomFiles(); }, [refreshRoomFiles]);
+
+  const createRoomFile = async (event) => {
+    event.preventDefault();
+    if (!roomFileTitle.trim() || roomFileBusy) return;
+    setRoomFileBusy(true);
+    setRoomFilesError('');
+    try {
+      await fileApi.create(session.token, roomId, roomFileType, roomFileTitle.trim());
+      await refreshRoomFiles();
+      setRoomFileDialog(false);
+      setRoomFileTitle('');
+      setToast('File added to this room.');
+    } catch (error) {
+      setRoomFilesError(error.message || 'This file could not be created.');
+    } finally {
+      setRoomFileBusy(false);
+    }
+  };
 
   const receiveCanonical = useCallback((incoming, ownCommit = false) => {
     if (!incoming || !Number.isFinite(Number(incoming.revision))) return;
@@ -984,6 +1021,7 @@ function RoomPage() {
       setConnection('reconnecting');
     };
     const onUpdated = (event) => { if (event.roomId === roomId) receiveCanonical(event.note, event.operationId === inFlightRef.current?.operationId); };
+    const onFileChanged = (event) => { if (event.roomId === roomId) refreshRoomFiles(); };
     const onPresence = (event) => {
       if (event.roomId !== roomId || Number(event.presenceSequence) <= presenceSequenceRef.current) return;
       presenceSequenceRef.current = Number(event.presenceSequence);
@@ -991,19 +1029,19 @@ function RoomPage() {
     };
     const onExpired = () => { setConnection('error'); setSession(null); navigate('/login', { replace: true }); };
     socket.on('connect', onConnect); socket.on('disconnect', onDisconnect); socket.on('connect_error', onConnectError);
-    socket.on('note:updated', onUpdated); socket.on('presence:updated', onPresence); socket.on('session:expired', onExpired);
+    socket.on('note:updated', onUpdated); socket.on('presence:updated', onPresence); socket.on('file:created', onFileChanged); socket.on('file:updated', onFileChanged); socket.on('session:expired', onExpired);
     socket.connect();
     return () => {
       joined = false;
       window.clearTimeout(retryJoinTimer);
       socket.off('connect', onConnect); socket.off('disconnect', onDisconnect); socket.off('connect_error', onConnectError);
-      socket.off('note:updated', onUpdated); socket.off('presence:updated', onPresence); socket.off('session:expired', onExpired);
+      socket.off('note:updated', onUpdated); socket.off('presence:updated', onPresence); socket.off('file:created', onFileChanged); socket.off('file:updated', onFileChanged); socket.off('session:expired', onExpired);
       if (socket.connected) socket.emit('room:leave', { roomId });
       socket.disconnect(); socketRef.current = null;
     };
   // presenceSequence is a snapshot baseline for events; room/session are the only lifecycle keys.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, session?.token, Boolean(note), pageError, receiveCanonical, setSession, navigate]);
+  }, [roomId, session?.token, Boolean(note), pageError, receiveCanonical, refreshRoomFiles, setSession, navigate]);
 
   const submitSnapshot = useCallback(async (content, baseRevision = Number(note?.revision || 0), operationId = id()) => {
     const socket = socketRef.current;
@@ -1190,11 +1228,45 @@ function RoomPage() {
         <section className="aside-card glass-panel"><div className="aside-card-head"><span className="aside-icon"><Users size={15} /></span><span>IN THIS ROOM</span><span className={`aside-live${connection === 'live' ? ' is-connected' : ''}`}><i /> {connection === 'live' ? 'LIVE' : connection === 'reconnecting' ? 'RECONNECTING' : connection === 'error' ? 'OFFLINE' : 'CONNECTING'}</span></div><div className="member-list">
           {presence.length ? presence.map((person, index) => <div className="member-row" key={person.id}><span className={`avatar avatar-color-${index % 4}`}>{userInitials(person.name)}</span><span className="member-name">{person.name}{person.id === session.user.id && <small>you</small>}</span><span className="member-dot" title="Online" /></div>) : <p className="aside-empty">You’ll see your team here when they join.</p>}
         </div><div className="aside-foot"><span>{presence.length} {presence.length === 1 ? 'person' : 'people'} online</span><span className="member-spark">✳</span></div></section>
+        <section className="aside-card room-files-card glass-panel">
+          <div className="aside-card-head"><span className="aside-icon"><FileText size={15} /></span><span>FILES IN THIS ROOM</span><span className="room-file-count">{String(roomFiles.length).padStart(2, '0')}</span></div>
+          <button className="room-file-create" type="button" onClick={() => { setRoomFileDialog(true); setRoomFilesError(''); setRoomFileTitle(''); }}><Plus size={14} /> Add a file</button>
+          <div className="room-file-list">
+            {roomFiles.map((file) => {
+              const Icon = ({ document: FileText, notebook: NotebookTabs, slides: Presentation, sheet: Table2, code: Code2 })[file.type] || FileText;
+              const label = ({ document: 'Document', notebook: 'Notebook', slides: 'Presentation', sheet: 'Spreadsheet', code: 'Code workspace' })[file.type] || 'File';
+              return <Link className="room-file-link" key={file.id} to={`/studio/${roomId}/${file.id}`}>
+                <span className="room-file-icon"><Icon size={15} /></span>
+                <span className="room-file-copy"><strong>{file.title}</strong><small>{label} · Rev. {file.revision}</small></span>
+                <ArrowUpRight size={14} className="room-file-arrow" />
+              </Link>;
+            })}
+            {!roomFiles.length && !roomFilesError && <p className="aside-empty">Files you create for this team will appear here.</p>}
+            {roomFilesError && <p className="aside-empty" role="status">{roomFilesError}</p>}
+          </div>
+        </section>
         <section className="aside-card room-tip glass-panel"><div className="aside-card-head"><span className="aside-icon tip-icon"><Sparkles size={15} /></span><span>A LITTLE TIP</span></div><p>Write freely. Everyone in this room sees the same page update as you go.</p><div className="tip-decoration">✳</div></section>
         {isOwner && <button className="manage-invite glass-panel" onClick={loadInvite}><span className="manage-icon"><Settings2 size={15} /></span><span><strong>Room invitations</strong><small>Manage who can join this space</small></span><ArrowRight size={15} /></button>}
         <div className="room-aside-note"><ShieldCheck size={13} /><span>{DEMO_MODE ? 'Local demo data stays in this browser.' : 'Only invited members can see these notes.'}</span></div>
       </aside>
     </div>
+
+    {roomFileDialog && <Modal title="Add a file to this room" subtitle="Choose a format and give the shared file a name." onClose={() => { if (!roomFileBusy) setRoomFileDialog(false); }}>
+      <form className="modal-form" onSubmit={createRoomFile} aria-busy={roomFileBusy}>
+        <div className="create-kind-grid" role="group" aria-label="Choose a file type">
+          {[
+            { id: 'document', label: 'Document', detail: 'Write together', Icon: FileText },
+            { id: 'notebook', label: 'Notebook', detail: 'Organize notes', Icon: NotebookTabs },
+            { id: 'slides', label: 'Presentation', detail: 'Build a deck', Icon: Presentation },
+            { id: 'sheet', label: 'Spreadsheet', detail: 'Work with data', Icon: Table2 },
+            { id: 'code', label: 'Code workspace', detail: 'Run Python or C++', Icon: Code2 },
+          ].map(({ id: kind, label, detail, Icon }) => <button key={kind} type="button" className={`create-kind-option${roomFileType === kind ? ' selected' : ''}`} aria-pressed={roomFileType === kind} onClick={() => setRoomFileType(kind)}><Icon size={19} /><span><strong>{label}</strong><small>{detail}</small></span><span className="create-kind-check" aria-hidden="true">{roomFileType === kind ? '✓' : ''}</span></button>)}
+        </div>
+        <label className="field-label">File name<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required maxLength={80} value={roomFileTitle} onChange={(event) => setRoomFileTitle(event.target.value)} placeholder="e.g. Project brief" /></div></label>
+        {roomFilesError && <div className="form-error" role="alert">{roomFilesError}</div>}
+        <div className="modal-actions"><GlassButton type="button" onClick={() => setRoomFileDialog(false)} disabled={roomFileBusy}>Cancel</GlassButton><GlassButton variant="primary" disabled={roomFileBusy || !roomFileTitle.trim()}>{roomFileBusy ? <ButtonLoader label="Creating…" /> : <>Create file <ArrowRight size={15} /></>}</GlassButton></div>
+      </form>
+    </Modal>}
 
     {historyOpen && <div className="drawer-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) { setHistoryOpen(false); setPreview(null); } }}><aside className="history-drawer glass-panel" role="dialog" aria-modal="true" aria-labelledby="history-title"><div className="drawer-header"><div><span className="section-kicker">ROOM ACTIVITY</span><h2 id="history-title">Version history</h2><p>Every saved thought, right where you left it.</p></div><button className="icon-button" onClick={() => { setHistoryOpen(false); setPreview(null); }} aria-label="Close history"><X size={18} /></button></div>
       {previewLoading ? <InlineLoader className="history-loading" label="Loading version…" /> : preview ? <div className="version-preview"><button className="back-link" onClick={() => setPreview(null)}><ArrowLeft size={14} /> All versions</button><div className="preview-meta"><span className="preview-rev">REV. {String(preview.revision).padStart(3, '0')}</span><span>{dateLabel(preview.createdAt)}</span></div><div className="preview-content">{preview.content || <em>This version is an empty page.</em>}</div>{isOwner && <GlassButton variant="primary" className="restore-button" onClick={restoreVersion} disabled={busyRestore}>{busyRestore ? <ButtonLoader label="Restoring…" /> : <><RefreshCw size={15} /> Restore this version</>}</GlassButton>}</div> : <div className="history-list">{historyLoading && !historyItems.length ? <InlineLoader className="history-loading" label="Gathering your versions…" /> : historyItems.length ? historyItems.map((item) => <button className="history-item" key={item.revision} onClick={() => loadPreview(item)}><span className={`history-kind kind-${item.kind || 'edit'}`}>{item.kind === 'restore' ? <RefreshCw size={14} /> : <FileClock size={14} />}</span><span className="history-item-main"><strong>Version {item.revision}{item.revision === note?.revision ? <small className="current-tag">CURRENT</small> : null}</strong><small>{item.authorName || 'A teammate'} · {dateLabel(item.createdAt)}</small></span><ArrowRight size={15} /></button>) : !drawerError ? <div className="history-empty"><Clock3 size={23} /><strong>No earlier versions yet.</strong><span>As your team writes, saved versions will show up here.</span></div> : null}{historyCursor != null && <GlassButton className="load-more" onClick={loadMoreHistory} disabled={historyLoading}>{historyLoading ? <ButtonLoader label="Loading…" /> : <>Load older versions <ArrowDownLeft size={14} /></>}</GlassButton>}</div>}

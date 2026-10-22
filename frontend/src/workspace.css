@@ -198,6 +198,18 @@
 .app-shell .editor-author, .app-shell .editor-help { color: #aab6ad; font-size: 11px; }
 .app-shell .editor-author strong, .app-shell .member-name { color: #edf1e9; }
 .app-shell .aside-card { padding: 18px; border-radius: 17px; }
+.app-shell .room-file-count { margin-left: auto; color: var(--lime); font-size: 10px; }
+.app-shell .room-file-create { display: flex; min-height: 36px; align-items: center; gap: 7px; margin-top: 12px; padding: 0 10px; color: var(--lime); border: 1px solid rgba(var(--theme-accent-rgb, 198,243,91),.22); border-radius: 10px; background: rgba(var(--theme-accent-rgb, 198,243,91),.045); cursor: pointer; font: inherit; font-size: 11px; transition: border-color .16s ease, background .16s ease; }
+.app-shell .room-file-create:hover { border-color: rgba(var(--theme-accent-rgb, 198,243,91),.48); background: rgba(var(--theme-accent-rgb, 198,243,91),.09); }
+.app-shell .room-file-create:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+.app-shell .room-file-list { display: grid; gap: 6px; padding-top: 10px; }
+.app-shell .room-file-link { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 9px; color: var(--text); text-decoration: none; border: 1px solid rgba(255,255,255,.07); border-radius: 11px; background: rgba(0,0,0,.13); transition: border-color .16s ease, background .16s ease; }
+.app-shell .room-file-link:hover { border-color: rgba(var(--theme-accent-rgb, 198,243,91),.36); background: rgba(var(--theme-accent-rgb, 198,243,91),.055); }
+.app-shell .room-file-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; color: var(--lime); border: 1px solid rgba(var(--theme-accent-rgb, 198,243,91),.2); border-radius: 9px; background: rgba(var(--theme-accent-rgb, 198,243,91),.07); }
+.app-shell .room-file-copy { display: grid; min-width: 0; gap: 3px; }
+.app-shell .room-file-copy strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .room-file-copy small { color: #9da79d; font-size: 10px; }
+.app-shell .room-file-arrow { flex: 0 0 auto; margin-left: auto; color: #aab5a8; }
 .app-shell .aside-live, .app-shell .aside-empty, .app-shell .aside-foot, .app-shell .room-tip p, .app-shell .manage-invite small, .app-shell .room-aside-note { color: #b4beb5; font-size: 12px; }
 .app-shell .member-name { font-size: 13px; }
 .app-shell .member-name small { color: #d7efb2; border-color: rgba(var(--theme-accent-rgb, 198,243,91),.2); background: rgba(var(--theme-accent-rgb, 198,243,91),.06); font-size: 9px; }
@@ -237,7 +249,8 @@
 }
 .app-shell .preview-content em { color: #abb6a9; }
 .app-shell .field-label { color: #d9e1d8; font-size: 13px; }
-.app-shell .input-wrap:focus-within { border-color: rgba(var(--theme-accent-rgb, 198,243,91),.6); background: rgba(9,13,13,.75); }
+.app-shell .input-wrap:focus-within { border-color: rgba(var(--theme-accent-rgb, 198,243,91),.6); background: rgba(9,13,13,.75); outline: 2px solid var(--lime); outline-offset: 3px; box-shadow: 0 0 0 5px rgba(var(--theme-accent-rgb, 198,243,91),.1); }
+.app-shell .input-wrap input:focus-visible { outline: none; }
 .app-shell .input-wrap input { color: #f3f5ef; font-size: 14px; }
 .app-shell .input-wrap input::placeholder { color: #a9b4aa; }
 .app-shell .modal-actions .button { min-height: 44px; font-size: 13px; }

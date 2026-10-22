@@ -57,7 +57,7 @@ export const authApi = {
 };
 
 export const roomApi = {
-  list: (token) => (DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve({ items: demoRooms().filter((room) => room.kind !== 'file') }) : request('/rooms?limit=100', { token })),
+  list: (token) => (DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve({ items: demoRooms() }) : request('/rooms?limit=100', { token })),
   create: (token, name, kind = 'room') => {
     if (DEMO_MODE && token === DEMO_TOKEN) return Promise.resolve(demoCreateRoom(name, kind));
     return request('/rooms', { token, method: 'POST', body: JSON.stringify({ name, kind }) });

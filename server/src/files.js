@@ -441,7 +441,7 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
 
   async function listMine(userId) {
     const memberRows = await memberships
-      .find({ userId: objectId(userId.toString()), kind: 'file' }, { projection: { roomId: 1 } })
+      .find({ userId: objectId(userId.toString()) }, { projection: { roomId: 1 } })
       .limit(500)
       .toArray();
     const roomIds = memberRows.map((member) => member.roomId);
