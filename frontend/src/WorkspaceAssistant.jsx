@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { ArrowUp, CheckCircle2, CircleAlert, LoaderCircle, Sparkles, X } from 'lucide-react';
+import { ArrowUp, CheckCircle2, ChevronDown, CircleAlert, LoaderCircle, Sparkles, X } from 'lucide-react';
 import { assistantApi } from './api.js';
 import { assistantReducer, initialAssistantState } from './assistant-state.js';
 import './workspace-assistant.css';
@@ -126,9 +126,12 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
             <p className="wa-confidence">{insights.confidenceNote}</p>
             <button className="wa-regenerate" type="button" onClick={askInsights}><Sparkles size={14} /> Generate again</button>
           </div>}
-        </section> : <section id="wa-panel-chat" className="wa-view wa-chat" role="tabpanel" aria-labelledby="wa-tab-chat">
-          {!state.messages.length && <div className="wa-chat-welcome"><span className="section-kicker">ASK ABOUT THE WORK</span><h3>What are you thinking through?</h3><p>Answers use this room’s authorized notes and files, plus general reasoning.</p><div className="wa-examples" aria-label="Example questions">{examples.map((example) => <button key={example} type="button" onClick={() => dispatch({ type: 'question', value: example })}>{example}</button>)}</div></div>}
-          <div className="wa-messages" ref={scrollRef} aria-live="polite" aria-relevant="additions text">
+        </section> : <section id="wa-panel-chat" ref={scrollRef} className="wa-view wa-chat" role="tabpanel" aria-labelledby="wa-tab-chat" tabIndex={0}>
+          {!state.messages.length && <>
+            <div className="wa-chat-welcome"><span className="section-kicker">ASK ABOUT THE WORK</span><h3>What are you thinking through?</h3><p>Answers use this room’s authorized notes and files, plus general reasoning.</p><div className="wa-examples" aria-label="Example questions">{examples.map((example) => <button key={example} type="button" onClick={() => dispatch({ type: 'question', value: example })}>{example}</button>)}</div></div>
+            <div className="wa-scroll-cue"><span>Scroll down to ask your question</span><ChevronDown size={17} aria-hidden="true" /></div>
+          </>}
+          <div className="wa-messages" aria-live="polite" aria-relevant="additions text">
             {state.messages.map((message, index) => <article className={`wa-message wa-message-${message.role}`} key={`${index}-${message.role}`}><span>{message.role === 'user' ? 'You' : 'Synkro AI'}</span><p>{message.content}</p></article>)}
             {state.chatStatus === 'loading' && <div className="wa-chat-loading" role="status"><LoaderCircle className="wa-spin" size={15} /> Thinking…</div>}
           </div>
