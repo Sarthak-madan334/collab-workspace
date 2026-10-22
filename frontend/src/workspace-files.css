@@ -41,6 +41,13 @@
   font-size: 12px;
   white-space: nowrap;
 }
+.wf-room-presence { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 0 10px 0 7px; color: #c4cdc5; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: rgba(255,255,255,.035); font-size: 11px; white-space: nowrap; }
+.wf-room-avatars { display: flex; align-items: center; padding-left: 5px; }
+.wf-room-avatar { display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; margin-left: -5px; color: #e6efdc; border: 2px solid #111416; border-radius: 50%; background: #354238; font-size: 8px; font-weight: 700; }
+.wf-room-avatar-1 { color: #e3e8df; background: #4c554e; }
+.wf-room-avatar-2 { color: #e3ebd4; background: #505b3c; }
+.wf-room-avatar-3 { color: #d9e2da; background: #3e4a45; }
+.wf-room-avatar-overflow { width: auto; min-width: 25px; padding: 0 5px; color: #d6dfd5; background: #272d2a; }
 .wf-types {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -634,7 +641,8 @@
 .wf-header-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .wf-share {
   border-radius: 999px;

@@ -91,6 +91,17 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.equal(savedWorkMap.data.areas[0].assigneeId, bob.user.id);
   const invalidStatus = await request(`/rooms/${roomId}/files/${sheetId}/areas/spreadsheet/status`, 'POST', bob.token, { status: 'blocked' });
   assert.equal(invalidStatus.status, 422);
+  const codeFile = await request(`/rooms/${roomId}/files`, 'POST', alice.token, { type: 'code', title: 'Pair programming' });
+  const codeId = codeFile.data.file.id;
+  const pythonEdit = await request(`/rooms/${roomId}/files/${codeId}/ops`, 'POST', alice.token, { operationId: randomUUID(), baseRevision: 0, patch: { action: 'setCode', language: 'python', value: 'print("Alice")' } });
+  assert.equal(pythonEdit.status, 200);
+  const cppEdit = await request(`/rooms/${roomId}/files/${codeId}/ops`, 'POST', bob.token, { operationId: randomUUID(), baseRevision: 0, patch: { action: 'setCode', language: 'cpp', value: '#include <iostream>\nint main() { return 0; }' } });
+  assert.equal(cppEdit.status, 200);
+  const sharedCode = await request(`/rooms/${roomId}/files/${codeId}`, 'GET', bob.token);
+  assert.equal(sharedCode.data.file.content.sources.python, 'print("Alice")');
+  assert.equal(sharedCode.data.file.content.sources.cpp, '#include <iostream>\nint main() { return 0; }');
+  const overlappingCodeEdit = await request(`/rooms/${roomId}/files/${codeId}/ops`, 'POST', bob.token, { operationId: randomUUID(), baseRevision: 0, patch: { action: 'setCode', language: 'python', value: 'print("Bob")' } });
+  assert.equal(overlappingCodeEdit.status, 409);
   assert.equal((await request(`/rooms/${roomId}/files/${sheetId}/history/1/restore`, 'POST', bob.token, { operationId: randomUUID(), expectedRevision: 2 })).status, 403);
   const restoredFile = await request(`/rooms/${roomId}/files/${sheetId}/history/1/restore`, 'POST', alice.token, { operationId: randomUUID(), expectedRevision: 2 });
   assert.equal(restoredFile.data.file.revision, 3);
@@ -120,6 +131,15 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.equal(joined1.data.note.revision, 0);
   assert.equal(joined2.data.presence.length, 2);
   assert.equal(first.io.engine.transport.name, 'websocket');
+  const remoteFileUpdate = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('The other collaborator did not receive the shared code update')), 3000);
+    second.once('file:updated', (event) => { clearTimeout(timer); resolve(event); });
+  });
+  const codeUpdate = await request(`/rooms/${roomId}/files/${codeId}/ops`, 'POST', alice.token, { operationId: randomUUID(), baseRevision: 2, patch: { action: 'setCode', language: 'python', value: 'print("Live update")' } });
+  assert.equal(codeUpdate.status, 200);
+  const receivedCode = await remoteFileUpdate;
+  assert.equal(receivedCode.file.id, codeId);
+  assert.equal(receivedCode.file.content.sources.python, 'print("Live update")');
   const op1 = randomUUID();
   const edit1 = await first.emitWithAck('note:update', { roomId, operationId: op1, baseRevision: 0, content: 'Alice draft' });
   assert.equal(edit1.data.appliedRevision, 1);

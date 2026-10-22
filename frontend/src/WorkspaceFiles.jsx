@@ -52,29 +52,54 @@ const kinds = {
   },
 };
 
-function useFileEvents(token, roomId, onEvent) {
+function useFileEvents(token, roomId, onEvent, onPresence) {
   const callback = useRef(onEvent);
   callback.current = onEvent;
+  const presenceCallback = useRef(onPresence);
+  presenceCallback.current = onPresence;
   useEffect(() => {
     if (!token || !roomId) return undefined;
+    presenceCallback.current?.(null);
     const socket = createWorkspaceSocket(token);
-    const join = () => socketAck(socket, 'room:join', { roomId }).catch(() => {});
+    let presenceSequence = -1;
+    const syncPresence = (snapshot) => {
+      if (!snapshot || (snapshot.roomId && snapshot.roomId !== roomId)) return;
+      const sequence = Number(snapshot.presenceSequence);
+      if (!Number.isFinite(sequence) || sequence < presenceSequence) return;
+      presenceSequence = sequence;
+      presenceCallback.current?.(snapshot.presence || snapshot.users || []);
+    };
+    const join = () => socketAck(socket, 'room:join', { roomId }).then(syncPresence).catch(() => {});
     const created = (event) => {
       if (event.roomId === roomId) callback.current(event);
     };
     const updated = (event) => {
       if (event.roomId === roomId) callback.current(event);
     };
+    const presenceUpdated = (event) => syncPresence(event);
+    const disconnected = () => presenceCallback.current?.(null);
     socket.on('connect', join);
     socket.on('file:created', created);
     socket.on('file:updated', updated);
     socket.on('file:contributions-updated', updated);
+    socket.on('presence:updated', presenceUpdated);
+    socket.on('disconnect', disconnected);
     socket.connect();
     return () => {
+      socket.off('connect', join);
+      socket.off('file:created', created);
+      socket.off('file:updated', updated);
+      socket.off('file:contributions-updated', updated);
+      socket.off('presence:updated', presenceUpdated);
+      socket.off('disconnect', disconnected);
       socket.emit('room:leave', { roomId });
       socket.disconnect();
     };
   }, [token, roomId]);
+}
+
+function personInitials(name = '') {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || '?';
 }
 
 export function StudioHome({ token }) {
@@ -989,6 +1014,7 @@ export function FileEditor({ token, userId }) {
   const [previewVersion, setPreviewVersion] = useState(null);
   const [contributionMap, setContributionMap] = useState(null);
   const [updatingArea, setUpdatingArea] = useState('');
+  const [roomPresence, setRoomPresence] = useState(null);
   const [panelBusy, setPanelBusy] = useState(false);
   const [panelError, setPanelError] = useState('');
   const draftRef = useRef({});
@@ -1042,7 +1068,7 @@ export function FileEditor({ token, userId }) {
     if (event.fileId === fileId && filePanel === 'contributions') {
       fileApi.contributions(token, roomId, fileId).then(setContributionMap).catch(() => {});
     }
-  });
+  }, setRoomPresence);
   const read = (key, fallback) => drafts[key]?.value ?? fallback;
   const save = useCallback(
     (key) => {
@@ -1233,6 +1259,10 @@ export function FileEditor({ token, userId }) {
           <h1>{file.title}</h1>
         </div>
         <div className="wf-header-actions">
+          <div className="wf-room-presence" role="status" aria-live="polite" aria-atomic="true" aria-label={roomPresence ? `${roomPresence.length} people in this room` : 'Joining room'}>
+            <div className="wf-room-avatars" aria-hidden="true">{(roomPresence || []).slice(0, 3).map((person, index) => <span className={`wf-room-avatar wf-room-avatar-${index % 4}`} key={person.id} title={person.name}>{personInitials(person.name)}</span>)}{roomPresence?.length > 3 && <span className="wf-room-avatar wf-room-avatar-overflow">+{roomPresence.length - 3}</span>}</div>
+            <span>{roomPresence ? `${roomPresence.length} ${roomPresence.length === 1 ? 'person' : 'people'} here` : 'Joining room…'}</span>
+          </div>
           <span className="wf-status" role="status">
             {status}
           </span>
