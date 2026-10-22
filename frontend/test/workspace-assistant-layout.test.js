@@ -15,10 +15,13 @@ test('assistant panel has desktop, tablet, and full-width mobile reading widths'
 });
 
 test('header and tabs remain outside the only scrollable tab content region', () => {
-  assert.match(css, /\.wa-header,\s*\.wa-tabs,\s*\.wa-footer\s*\{[^}]*flex:\s*0\s+0\s+auto/s);
+  assert.match(css, /\.wa-header,\s*\.wa-tabs\s*\{[^}]*flex:\s*0\s+0\s+auto/s);
+  assert.match(css, /grid-template-rows:\s*auto\s+auto\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /\.wa-view\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto/s);
   assert.match(css, /\.wa-messages\s*\{[^}]*overflow:\s*visible/s);
   assert.match(component, /<header className="wa-header">[\s\S]*?<div className="wa-tabs"[\s\S]*?className="wa-view wa-insights"[\s\S]*?className="wa-view wa-chat"/);
+  assert.doesNotMatch(component, /AI-generated guidance based on the current workspace/);
+  assert.doesNotMatch(css, /\.wa-footer/);
 });
 
 test('chat content scrolls independently above the docked composer', () => {

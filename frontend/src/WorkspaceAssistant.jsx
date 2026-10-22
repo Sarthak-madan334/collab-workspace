@@ -143,7 +143,6 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
             </form>
           </div>
         </section>}
-        <footer className="wa-footer">AI-generated guidance based on the current workspace.</footer>
       </aside>
     </div>}
   </>;

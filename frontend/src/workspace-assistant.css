@@ -100,7 +100,6 @@
 .wa-composer textarea::placeholder { color: #747c71; }
 .wa-composer-foot { display: flex; align-items: center; justify-content: space-between; color: #777f74; font: 9px 'DM Mono', monospace; }
 .wa-composer-foot .button { min-height: 34px; padding: 0 12px; font-size: 10px; }
-.wa-footer { flex: 0 0 auto; padding: 11px 20px; color: #747c72; border-top: 1px solid var(--line); font-size: 9px; }
 @media (max-width: 600px) {
   .wa-scrim { inset: calc(env(safe-area-inset-top) + 72px) 10px calc(env(safe-area-inset-bottom) + 10px); }
   .wa-panel { width: 100%; height: 100%; border-radius: 18px; animation-name: wa-mobile-enter; }
@@ -127,12 +126,12 @@
   max-width: calc(100vw - 32px);
   min-width: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
   color: var(--wa-text);
   border-color: rgba(226, 236, 222, .2);
   background: #101412;
 }
-.wa-header, .wa-tabs, .wa-footer { position: relative; z-index: 1; flex: 0 0 auto; }
+.wa-header, .wa-tabs { position: relative; z-index: 1; flex: 0 0 auto; }
 .wa-header { min-height: 84px; padding: 17px 25px; border-color: var(--wa-line); }
 .wa-heading-icon { width: 40px; height: 40px; }
 .wa-heading-copy .section-kicker { color: var(--wa-subtle); font-size: 10px; }
@@ -217,7 +216,6 @@
 .wa-composer textarea::placeholder { color: #adb7aa; opacity: 1; }
 .wa-composer-foot { min-height: 44px; color: var(--wa-muted); font-size: 12px; }
 .wa-composer-foot .button { min-height: 42px; padding: 0 15px; font-size: 14px; }
-.wa-footer { min-height: 46px; padding: 13px 25px; color: var(--wa-muted); border-color: var(--wa-line); background: #101412; font-size: 12px; line-height: 1.4; }
 @media (min-width: 601px) and (max-width: 1100px) {
   .wa-panel { width: min(520px, calc(100vw - 32px)); }
 }
@@ -233,7 +231,6 @@
   .wa-overall { grid-template-columns: 130px minmax(0, 1fr); gap: 15px; }
   .wa-overall strong { font-size: 44px; }
   .wa-result-columns { grid-template-columns: 1fr; gap: 17px; }
-  .wa-footer { padding: 12px 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wa-panel, .wa-spin { animation-duration: .01ms; animation-iteration-count: 1; }
