@@ -74,6 +74,7 @@ const SessionContext = createContext(null);
 const useSession = () => useContext(SessionContext);
 const ThemeContext = createContext(null);
 const useWorkspaceTheme = () => useContext(ThemeContext);
+const AssistantOpenContext = createContext(null);
 
 function ThemeProvider({ children }) {
   const [theme, setCurrentTheme] = useState(() => readWorkspaceTheme());
@@ -431,11 +432,19 @@ function AppFrame({ children }) {
   const { theme } = useWorkspaceTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const shellRef = useRef(null);
   const topbarRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
+  const handleAssistantOpenChange = useCallback((open) => {
+    setAssistantOpen(open);
+    if (open) {
+      setMenuOpen(false);
+      setMobileOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -491,8 +500,8 @@ function AppFrame({ children }) {
     };
   }, [mobileOpen]);
 
-  return <div ref={shellRef} className="app-shell" data-theme={theme || DEFAULT_WORKSPACE_THEME}>
-    <header ref={topbarRef} className="topbar glass-panel">
+  return <div ref={shellRef} className={`app-shell${assistantOpen ? ' assistant-open' : ''}`} data-theme={theme || DEFAULT_WORKSPACE_THEME}>
+    <header ref={topbarRef} className="topbar glass-panel" aria-hidden={assistantOpen} inert={assistantOpen}>
       <Brand />
       <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open glass-panel' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className={`nav-link${location.pathname === '/dashboard' || location.pathname.startsWith('/rooms/') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Rooms</Link>
@@ -512,7 +521,9 @@ function AppFrame({ children }) {
         </div>
       </div>
     </header>
-    <div className="app-content">{children}</div>
+    <AssistantOpenContext.Provider value={handleAssistantOpenChange}>
+      <div className="app-content">{children}</div>
+    </AssistantOpenContext.Provider>
     <footer className="app-footer"><span>Synkro <b>·</b> A shared space for good work</span><span>BUILT TO THINK TOGETHER <span className="footer-star">✳</span></span></footer>
   </div>;
 }
@@ -1017,6 +1028,7 @@ function InviteJoinPage() {
 function RoomPage() {
   const { roomId } = useParams();
   const { session, setSession } = useSession();
+  const onAssistantOpenChange = useContext(AssistantOpenContext);
   const navigate = useNavigate();
   const socketRef = useRef(null);
   const draftRef = useRef('');
@@ -1359,7 +1371,7 @@ function RoomPage() {
       <ConnectionStatus connection={connection} saveState={saveState} dirty={dirty} onRetry={retrySave} />
       <div className="presence-stack" aria-label={`${presence.length} people online`}>{presence.slice(0, 4).map((person, index) => <span key={person.id} className={`avatar avatar-presence avatar-color-${index % 4}`} title={person.name}>{userInitials(person.name)}</span>)}{presence.length > 4 && <span className="avatar avatar-overflow">+{presence.length - 4}</span>}</div>
       <button className="toolbar-button glass-panel" onClick={openHistory} aria-label="Open room history"><History size={15} /><span>History</span></button>
-      <WorkspaceAssistant token={session.token} roomId={roomId} disabled={session.token === DEMO_TOKEN} />
+      <WorkspaceAssistant token={session.token} roomId={roomId} disabled={session.token === DEMO_TOKEN} onOpenChange={onAssistantOpenChange} />
       {isOwner && <button className="toolbar-button glass-panel" onClick={loadInvite} aria-label="Manage room invitations"><Users size={15} /><span>Invite</span></button>}
     </div></div>
 

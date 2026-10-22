@@ -1,7 +1,7 @@
 .wa-scrim {
   position: fixed;
   z-index: 1001;
-  inset: 86px 16px 16px;
+  inset: 0;
   display: flex;
   justify-content: flex-end;
   background: rgba(0, 0, 0, .66);
@@ -9,13 +9,14 @@
 }
 .wa-panel {
   width: min(410px, 100%);
-  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 20px;
+  border-radius: 0;
   background: #111413;
   box-shadow: -24px 0 70px rgba(0, 0, 0, .4);
   animation: wa-enter .24s cubic-bezier(.2, .8, .2, 1) both;
@@ -103,7 +104,7 @@
 @media (max-width: 600px) {
   .wa-scrim { inset: calc(env(safe-area-inset-top) + 72px) 10px calc(env(safe-area-inset-bottom) + 10px); }
   .wa-panel { width: 100%; height: 100%; border-radius: 18px; animation-name: wa-mobile-enter; }
-  @keyframes wa-mobile-enter { from { opacity: .65; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes wa-mobile-enter { from { opacity: .65; } to { opacity: 1; } }
   .wa-header { min-height: 70px; padding: 13px 16px; }
   .wa-tabs { padding: 0 14px; }
   .wa-insights { padding: 16px; }
@@ -116,7 +117,7 @@
 }
 
 /* Reading-width layout: only the active tab panel scrolls. */
-.wa-scrim { inset: 86px 16px 16px; }
+.wa-scrim { inset: 0; }
 .wa-panel {
   --wa-text: #f1f4ed;
   --wa-muted: #c3cbc0;
@@ -125,8 +126,8 @@
   width: min(640px, 48vw);
   max-width: calc(100vw - 32px);
   min-width: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   color: var(--wa-text);
   border-color: rgba(226, 236, 222, .2);
   background: #101412;
@@ -212,7 +213,7 @@
 .wa-composer-dock { position: relative; z-index: 2; flex: 0 0 auto; padding: 12px 27px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--wa-line); background: #101412; }
 .wa-composer { gap: 10px; margin: 0; padding: 0; border: 0; }
 .wa-composer label { color: var(--wa-text); font-size: 15px; }
-.wa-composer textarea { height: clamp(56px, 12dvh, 88px); min-height: 56px; max-height: 88px; resize: none; padding: 11px 14px; color: var(--wa-text); border-color: rgba(226,236,222,.25); background: #090c0a; font-size: 16px; line-height: 1.5; }
+.wa-composer textarea { height: 80px; min-height: 72px; max-height: 96px; resize: vertical; padding: 11px 14px; color: var(--wa-text); border-color: rgba(226,236,222,.25); background: #090c0a; font-size: 16px; line-height: 1.5; }
 .wa-composer textarea::placeholder { color: #adb7aa; opacity: 1; }
 .wa-composer-foot { min-height: 44px; color: var(--wa-muted); font-size: 12px; }
 .wa-composer-foot .button { min-height: 42px; padding: 0 15px; font-size: 14px; }
@@ -227,6 +228,7 @@
   .wa-insights { padding: 20px 17px calc(30px + env(safe-area-inset-bottom)); }
   .wa-chat-content { padding: 21px 17px 24px; }
   .wa-composer-dock { padding-right: 17px; padding-left: 17px; }
+  .wa-composer textarea { height: 72px; min-height: 64px; max-height: 88px; }
   .wa-empty h3, .wa-chat-welcome h3 { font-size: 22px; }
   .wa-overall { grid-template-columns: 130px minmax(0, 1fr); gap: 15px; }
   .wa-overall strong { font-size: 44px; }
@@ -235,3 +237,5 @@
 @media (prefers-reduced-motion: reduce) {
   .wa-panel, .wa-spin { animation-duration: .01ms; animation-iteration-count: 1; }
 }
+
+.app-shell.assistant-open .topbar { visibility: hidden; pointer-events: none; }

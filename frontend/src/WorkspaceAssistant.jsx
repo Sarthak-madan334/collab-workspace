@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ArrowUp, CheckCircle2, CircleAlert, LoaderCircle, Sparkles, X } from 'lucide-react';
 import { assistantApi } from './api.js';
 import { assistantReducer, initialAssistantState } from './assistant-state.js';
@@ -28,7 +28,7 @@ function Score({ label, score, detail }) {
   </div>;
 }
 
-export default function WorkspaceAssistant({ token, roomId, activeFileId, launcherClassName = 'toolbar-button glass-panel', disabled = false }) {
+export default function WorkspaceAssistant({ token, roomId, activeFileId, launcherClassName = 'toolbar-button glass-panel', disabled = false, onOpenChange }) {
   const [open, setOpen] = useState(false);
   const [state, dispatch] = useReducer(assistantReducer, initialAssistantState);
   const triggerRef = useRef(null);
@@ -36,6 +36,10 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
   const panelRef = useRef(null);
   const scrollRef = useRef(null);
   const requestLock = useRef(false);
+  const setPanelOpen = useCallback((nextOpen) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [onOpenChange]);
 
   useEffect(() => { dispatch({ type: 'reset' }); }, [roomId, activeFileId]);
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setOpen(false);
+        setPanelOpen(false);
       }
       if (event.key !== 'Tab' || !panelRef.current) return;
       const focusable = [...panelRef.current.querySelectorAll('button:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')];
@@ -60,6 +64,12 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
       document.removeEventListener('keydown', onKeyDown);
       returnFocus?.focus?.();
     };
+  }, [open, setPanelOpen]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
   }, [open]);
   useEffect(() => {
     if (state.chatStatus === 'loading' || state.chatStatus === 'success') scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -92,15 +102,15 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
 
   const insights = state.insights;
   return <>
-    <button ref={triggerRef} type="button" className={launcherClassName} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} title={disabled ? 'AI Assistant is unavailable in the local demo. Sign in with a server-backed account to use it.' : undefined}>
+    <button ref={triggerRef} type="button" className={launcherClassName} onClick={() => setPanelOpen(true)} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} title={disabled ? 'AI Assistant is unavailable in the local demo. Sign in with a server-backed account to use it.' : undefined}>
       <Sparkles size={15} /><span>AI Assistant</span>
     </button>
-    {open && <div className="wa-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+    {open && <div className="wa-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanelOpen(false); }}>
       <aside ref={panelRef} className="wa-panel" role="dialog" aria-modal="true" aria-labelledby="wa-title" aria-describedby="wa-description">
         <header className="wa-header">
           <div className="wa-heading-icon"><Sparkles size={17} /></div>
           <div className="wa-heading-copy"><span className="section-kicker">YOUR WORKSPACE, IN FOCUS</span><h2 id="wa-title">AI Assistant</h2></div>
-          <button ref={closeRef} className="icon-button" type="button" onClick={() => setOpen(false)} aria-label="Close AI Assistant"><X size={18} /></button>
+          <button ref={closeRef} className="icon-button" type="button" onClick={() => setPanelOpen(false)} aria-label="Close AI Assistant"><X size={18} /></button>
           <p id="wa-description" className="sr-only">Workspace insights and questions, based only on content you are authorized to view.</p>
         </header>
         <div className="wa-tabs" role="tablist" aria-label="Assistant views">
