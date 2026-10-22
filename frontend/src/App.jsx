@@ -6,7 +6,7 @@ import {
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
   LockKeyhole, MessageCircle, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi, Code2,
-  Palette, Trash2, X, Zap,
+  Palette, Share2, Trash2, X, Zap,
 } from 'lucide-react';
 import { authApi, fileApi, roomApi } from './api.js';
 import { validateAuthFields } from './auth-validation.js';
@@ -433,6 +433,7 @@ function AppFrame({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const shellRef = useRef(null);
   const topbarRef = useRef(null);
   const navigate = useNavigate();
@@ -512,7 +513,7 @@ function AppFrame({ children }) {
       </nav>
       <div className="topbar-actions">
         <button className="icon-button mobile-menu" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? 'Close workspace navigation' : 'Open workspace navigation'} aria-expanded={mobileOpen} aria-controls="workspace-navigation">{mobileOpen ? <X size={19} /> : <Menu size={19} />}</button>
-        <button className="help-button" title="Help"><CircleHelp size={17} /><span>Help</span></button>
+        <button className="help-button" type="button" aria-label="Open help" onClick={() => setHelpOpen(true)} title="Help"><CircleHelp size={17} /><span>Help</span></button>
         <div className="profile-wrap">
           <button className="profile-button" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
             <span className="avatar avatar-profile">{userInitials(session?.user?.name)}</span><span className="profile-name">{session?.user?.name}</span><ChevronDown size={14} />
@@ -525,6 +526,17 @@ function AppFrame({ children }) {
       <div className="app-content">{children}</div>
     </AssistantOpenContext.Provider>
     <footer className="app-footer"><span>Synkro <b>·</b> A shared space for good work</span><span>BUILT TO THINK TOGETHER <span className="footer-star">✳</span></span></footer>
+    {helpOpen && <Modal title="Help & Getting Started" subtitle="Everything you need to collaborate in Synkro." onClose={() => setHelpOpen(false)} initialFocus className="help-modal-card" scrimClassName="help-modal-scrim">
+      <div className="help-topics">
+        <section className="help-topic"><span className="help-topic-icon"><LayoutGrid size={17} /></span><div><h3>Create or join a room</h3><p>From Rooms, choose Create new to start a private room, or Join a room and enter an invite code.</p></div></section>
+        <section className="help-topic"><span className="help-topic-icon"><Users size={17} /></span><div><h3>Invite teammates</h3><p>In a room you own, choose Invite to copy its join code or share it on WhatsApp. Rotating the code prevents new joins with the old one.</p></div></section>
+        <section className="help-topic"><span className="help-topic-icon"><FilePlus2 size={17} /></span><div><h3>Create and edit files</h3><p>Use Add a file in a room to create a document, notebook, presentation, spreadsheet, or Python/C++ code workspace, then work on it together.</p></div></section>
+        <section className="help-topic"><span className="help-topic-icon"><Share2 size={17} /></span><div><h3>Share files and rooms</h3><p>Copy a room invite link from its actions menu. In a file workspace, choose Share, then Copy file link to open that file after joining its room.</p></div></section>
+        <section className="help-topic"><span className="help-topic-icon"><Sparkles size={17} /></span><div><h3>Use AI Assistant</h3><p>Ask about a room or file. Responses use the authorized notes and files available there, together with general reasoning.</p></div></section>
+        <section className="help-topic"><span className="help-topic-icon"><History size={17} /></span><div><h3>Restore previous work / revisions</h3><p>Open History to preview saved versions. Room and file owners can restore an earlier version as a new revision.</p></div></section>
+      </div>
+      <div className="modal-actions help-modal-actions"><span>Press Esc to close</span><GlassButton type="button" variant="primary" onClick={() => setHelpOpen(false)}>Close</GlassButton></div>
+    </Modal>}
   </div>;
 }
 
@@ -945,7 +957,7 @@ function RoomCard({ room, index, isOwner, menuOpen, onToggleMenu, onCloseMenu, o
   </article>;
 }
 
-function Modal({ title, subtitle, children, onClose, dismissDisabled = false }) {
+function Modal({ title, subtitle, children, onClose, dismissDisabled = false, initialFocus = false, className = '', scrimClassName = '' }) {
   const onCloseRef = useRef(onClose);
   const dismissDisabledRef = useRef(dismissDisabled);
   const dialogRef = useRef(null);
@@ -956,6 +968,7 @@ function Modal({ title, subtitle, children, onClose, dismissDisabled = false }) 
     const previousFocus = returnFocusRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    if (initialFocus) dialogRef.current?.querySelector('button:not(:disabled), input:not(:disabled), a[href]')?.focus();
     const onKey = (event) => {
       if (event.key === 'Escape' && !dismissDisabledRef.current) {
         onCloseRef.current();
@@ -975,8 +988,8 @@ function Modal({ title, subtitle, children, onClose, dismissDisabled = false }) 
       window.removeEventListener('keydown', onKey);
       previousFocus?.focus?.();
     };
-  }, []);
-  return <div className="modal-scrim" onMouseDown={(event) => { if (!dismissDisabledRef.current && event.target === event.currentTarget) onCloseRef.current(); }}><section ref={dialogRef} className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" type="button" onClick={() => { if (!dismissDisabledRef.current) onCloseRef.current(); }} aria-label="Close dialog" disabled={dismissDisabled}><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
+  }, [initialFocus]);
+  return <div className={`modal-scrim ${scrimClassName}`} onMouseDown={(event) => { if (!dismissDisabledRef.current && event.target === event.currentTarget) onCloseRef.current(); }}><section ref={dialogRef} className={`modal-card glass-panel ${className}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description"><button className="modal-close icon-button" type="button" onClick={() => { if (!dismissDisabledRef.current) onCloseRef.current(); }} aria-label="Close dialog" disabled={dismissDisabled}><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p id="modal-description">{subtitle}</p>{children}</section></div>;
 }
 
 function InviteJoinRoute() {

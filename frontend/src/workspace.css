@@ -233,6 +233,19 @@
   -webkit-backdrop-filter: blur(20px);
 }
 .app-shell .drawer-header p, .app-shell .modal-card > p { color: #b8c2b9; font-size: 13px; }
+.app-shell .help-modal-scrim { z-index: 100; }
+.app-shell .help-modal-card { width: min(100%, 720px); max-height: min(88dvh, 820px); overflow-y: auto; padding: 32px; }
+.app-shell .help-modal-card h2 { margin-top: 8px; font-size: 28px; }
+.app-shell .help-modal-card > p { max-width: none; margin-bottom: 22px; }
+.app-shell .help-topics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.app-shell .help-topic { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 11px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.035); }
+.app-shell .help-topic-icon { width: 32px; height: 32px; display: grid; place-items: center; color: var(--lime); border: 1px solid rgba(var(--theme-accent-rgb, 198,243,91),.24); border-radius: 9px; background: rgba(var(--theme-accent-rgb, 198,243,91),.08); }
+.app-shell .help-topic h3 { margin: 1px 0 5px; color: var(--text); font-size: 13px; line-height: 1.35; }
+.app-shell .help-topic p { margin: 0; color: #b8c2b9; font-size: 12px; line-height: 1.55; }
+.app-shell .help-modal-actions { justify-content: space-between; margin-top: 18px; }
+.app-shell .help-modal-actions > span { color: #aeb9af; font-size: 12px; }
+.app-shell .help-modal-actions .button { min-height: 40px; font-size: 13px; }
+.app-shell .help-button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 .app-shell .history-item { color: #c0cbc0; border-bottom-color: var(--line); }
 .app-shell .history-item:hover { color: #fff; background: rgba(255,255,255,.07); }
 .app-shell .history-item-main strong { color: #f0f2e9; font-size: 13px; }
@@ -388,6 +401,10 @@
     padding: 25px 20px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
   }
+  .app-shell .help-modal-card { max-height: 90dvh; padding: 23px 19px calc(18px + env(safe-area-inset-bottom)); }
+  .app-shell .help-modal-card h2 { font-size: 24px; }
+  .app-shell .help-modal-card > p { margin-bottom: 16px; }
+  .app-shell .help-topics { grid-template-columns: 1fr; gap: 8px; }
   .app-shell .modal-close { top: 11px; right: 12px; width: 44px; height: 44px; }
   .app-shell .modal-card h2 { font-size: 25px; }
   .app-shell .modal-card > p { font-size: 14px; }
