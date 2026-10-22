@@ -9,6 +9,7 @@ export function loadConfig(env = process.env) {
   const googleClientId = env.GOOGLE_CLIENT_ID?.trim() || null;
   const githubClientId = env.GITHUB_CLIENT_ID?.trim() || null;
   const githubClientSecret = env.GITHUB_CLIENT_SECRET?.trim() || null;
+  const codeRunnerUrl = (env.CODE_RUNNER_URL || 'https://wandbox.org/api').trim().replace(/\/$/, '');
   const origins = (env.CLIENT_ORIGINS ?? (production ? '' : 'http://localhost:5173'))
     .split(',').map((origin) => origin.trim()).filter(Boolean);
 
@@ -25,6 +26,11 @@ export function loadConfig(env = process.env) {
     (githubClientSecret && (githubClientSecret.length < 20 || githubClientSecret.length > 256 || /\s/.test(githubClientSecret)))) {
     throw new Error('GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must both be configured');
   }
+  let runnerUrl;
+  try { runnerUrl = new URL(codeRunnerUrl); } catch { throw new Error('CODE_RUNNER_URL must be a valid HTTPS URL'); }
+  if (runnerUrl.protocol !== 'https:' || runnerUrl.username || runnerUrl.password || runnerUrl.search || runnerUrl.hash) {
+    throw new Error('CODE_RUNNER_URL must be an HTTPS URL without credentials or query parameters');
+  }
   if (!origins.length) throw new Error('CLIENT_ORIGINS must contain an exact frontend origin');
   for (const origin of origins) {
     let url;
@@ -39,5 +45,6 @@ export function loadConfig(env = process.env) {
     // Keep the web origins explicit; the native app still needs a valid bearer token.
     origins: new Set([...origins, 'https://localhost']), sessionTtlMs: sessionHours * 60 * 60 * 1000,
     trustProxyHops, logLevel: env.LOG_LEVEL || 'info', googleClientId, githubClientId, githubClientSecret,
+    codeRunnerUrl,
   };
 }

@@ -9,6 +9,7 @@ The repository contains the React frontend and Node.js backend. The requirements
 | [Tech stack](tech-stack.md) | Required technologies and supporting choices |
 | [System architecture](system-architecture.md) | Components, data flow, and deployment boundaries |
 | [Frontend](frontend.md) | Screens, state, editor behavior, accessibility |
+| [Code workspaces](code-workspaces.md) | Shared Python and C++ editing and isolated execution |
 | [Backend](backend.md) | Services, lifecycle, authorization, persistence |
 | [Data models](data-models.md) | Collections, fields, indexes, and invariants |
 | [API contract](api-contract.md) | HTTP routes, payloads, and errors |

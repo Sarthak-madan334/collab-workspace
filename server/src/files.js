@@ -4,9 +4,15 @@ import { assert } from './errors.js';
 import { transaction } from './db.js';
 import { beforeRevision, limit, object, objectId, operationId, revision, string } from './validation.js';
 
-const TYPES = new Set(['document', 'slides', 'sheet', 'notebook']);
+const TYPES = new Set(['document', 'slides', 'sheet', 'notebook', 'code']);
 const MAX_FILE_BYTES = 256 * 1024;
+const MAX_CODE_BYTES = 64 * 1024;
 const cellPattern = /^[A-Z](?:[1-9]|[1-9]\d|100)$/;
+
+const starterCode = {
+  python: 'print("Hello from Synkro!")\n',
+  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from Synkro!" << std::endl;\n    return 0;\n}\n',
+};
 
 export const fileShape = (file) => ({
   id: file._id.toString(),
@@ -40,10 +46,11 @@ export function initialFileContent(type) {
     return {
       pages: [{ id: randomUUID(), title: 'Untitled page', body: '', font: 'Aptos', size: 17 }],
     };
+  if (type === 'code') return { language: 'python', sources: { ...starterCode }, stdin: '' };
   return { cells: {}, styles: {} };
 }
 
-function validatePatch(type, patch) {
+export function validatePatch(type, patch) {
   assert(
     patch && typeof patch === 'object' && !Array.isArray(patch),
     400,
@@ -78,6 +85,22 @@ function validatePatch(type, patch) {
       'Invalid document formatting',
     );
     return { action: 'setFormat', field: patch.field, value: patch.value };
+  }
+  if (type === 'code' && patch.action === 'setCode') {
+    object(patch, ['action', 'language', 'value']);
+    assert(['python', 'cpp'].includes(patch.language), 422, 'VALIDATION_FAILED', 'Choose Python or C++');
+    assert(typeof patch.value === 'string' && Buffer.byteLength(patch.value, 'utf8') <= MAX_CODE_BYTES, 413, 'PAYLOAD_TOO_LARGE', 'Code exceeds 64 KiB');
+    return { action: 'setCode', language: patch.language, value: patch.value };
+  }
+  if (type === 'code' && patch.action === 'setCodeLanguage') {
+    object(patch, ['action', 'language']);
+    assert(['python', 'cpp'].includes(patch.language), 422, 'VALIDATION_FAILED', 'Choose Python or C++');
+    return { action: 'setCodeLanguage', language: patch.language };
+  }
+  if (type === 'code' && patch.action === 'setCodeStdin') {
+    object(patch, ['action', 'value']);
+    assert(typeof patch.value === 'string' && Buffer.byteLength(patch.value, 'utf8') <= 16 * 1024, 413, 'PAYLOAD_TOO_LARGE', 'Program input exceeds 16 KiB');
+    return { action: 'setCodeStdin', value: patch.value };
   }
   if (type === 'slides' && patch.action === 'addSlide') {
     object(patch, ['action', 'slideId']);
@@ -225,6 +248,9 @@ export function applyFilePatch(file, patch, baseRevision) {
   let key;
   if (patch.action === 'rename') key = 'title';
   if (patch.action === 'setBody') key = 'document:body';
+  if (patch.action === 'setCode') key = `code:source:${patch.language}`;
+  if (patch.action === 'setCodeLanguage') key = 'code:language';
+  if (patch.action === 'setCodeStdin') key = 'code:stdin';
   if (patch.action === 'setFormat') key = `document:format:${patch.field}`;
   if (patch.action === 'setSlide') key = `slide:${patch.slideId}:${patch.field}`;
   if (['addSlide', 'deleteSlide', 'duplicateSlide', 'moveSlide'].includes(patch.action))
@@ -242,6 +268,9 @@ export function applyFilePatch(file, patch, baseRevision) {
 
   if (patch.action === 'rename') file.title = patch.value;
   else if (patch.action === 'setBody') content.body = patch.value;
+  else if (patch.action === 'setCode') content.sources[patch.language] = patch.value;
+  else if (patch.action === 'setCodeLanguage') content.language = patch.language;
+  else if (patch.action === 'setCodeStdin') content.stdin = patch.value;
   else if (patch.action === 'setFormat') content.format[patch.field] = patch.value;
   else if (patch.action === 'setSlide') {
     const slide = content.slides.find((item) => item.id === patch.slideId);
@@ -404,6 +433,7 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
 
   function workAreas(file) {
     if (file.type === 'document') return [{ id: 'document', label: 'Document' }];
+    if (file.type === 'code') return [{ id: 'code', label: 'Code' }];
     if (file.type === 'sheet') return [{ id: 'spreadsheet', label: 'Spreadsheet' }];
     if (file.type === 'slides') return (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title?.trim() || 'Untitled slide' }));
     return (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title?.trim() || 'Untitled page' }));
@@ -447,7 +477,7 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
       TYPES.has(payload.type),
       422,
       'VALIDATION_FAILED',
-      'Choose a document, notebook, presentation, or sheet',
+      'Choose a document, notebook, presentation, spreadsheet, or code file',
     );
     const title = string(payload.title, 'File name', 1, 80);
     const id = objectId(roomId);
@@ -631,7 +661,7 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
       memberships.find({ roomId: room._id }, { projection: { userId: 1 } }).limit(100).toArray(),
       operations.aggregate([
         { $match: { fileId: id, 'patch.action': { $ne: 'restore' } } },
-        { $project: { authorId: 1, areaId: file.type === 'document' ? 'document' : file.type === 'sheet' ? 'spreadsheet' : file.type === 'slides'
+        { $project: { authorId: 1, areaId: file.type === 'document' ? 'document' : file.type === 'sheet' ? 'spreadsheet' : file.type === 'code' ? 'code' : file.type === 'slides'
           ? { $concat: ['slide:', { $ifNull: ['$patch.slideId', ''] }] }
           : { $concat: ['page:', { $ifNull: ['$patch.pageId', ''] }] } } },
         { $group: { _id: { authorId: '$authorId', areaId: '$areaId' }, edits: { $sum: 1 } } },

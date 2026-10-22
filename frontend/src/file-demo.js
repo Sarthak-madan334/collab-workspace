@@ -2,6 +2,10 @@ import { DEMO_USER, demoRoom } from './demo.js';
 
 const STORAGE_KEY = 'synkro.demo.files.v1';
 const HISTORY_KEY = 'synkro.demo.file-history.v1';
+const CODE_STARTERS = {
+  python: 'print("Hello from Synkro!")\n',
+  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from Synkro!" << std::endl;\n    return 0;\n}\n',
+};
 const read = () => {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -61,13 +65,15 @@ export function demoFileCreate(roomId, type, title) {
                   },
                 ],
               }
-            : { cells: {}, styles: {} },
+            : type === 'code'
+              ? { language: 'python', sources: { ...CODE_STARTERS }, stdin: '' }
+              : { cells: {}, styles: {} },
     createdAt: now,
     updatedAt: now,
     updatedBy: DEMO_USER.id,
   };
   if (
-    !['document', 'slides', 'sheet', 'notebook'].includes(type) ||
+    !['document', 'slides', 'sheet', 'notebook', 'code'].includes(type) ||
     !file.title ||
     file.title.length > 80
   )
@@ -98,19 +104,25 @@ export function demoFileUpdate(roomId, fileId, { baseRevision, patch }) {
       ? 'title'
       : patch.action === 'setBody'
         ? 'document:body'
-        : patch.action === 'setFormat'
-          ? `document:format:${patch.field}`
-          : patch.action === 'setSlide'
-            ? `slide:${patch.slideId}:${patch.field}`
-            : patch.action === 'setPage'
-              ? `page:${patch.pageId}:${patch.field}`
-              : patch.action === 'setCell'
-                ? `cell:${patch.cell}`
-                : patch.action === 'setCellStyle'
-                  ? `cellstyle:${patch.cell}:${patch.field}`
-                  : patch.action === 'addPage' || patch.action === 'deletePage'
-                    ? 'pages:list'
-                    : 'slides:list';
+        : patch.action === 'setCode'
+          ? `code:source:${patch.language}`
+          : patch.action === 'setCodeLanguage'
+            ? 'code:language'
+            : patch.action === 'setCodeStdin'
+              ? 'code:stdin'
+              : patch.action === 'setFormat'
+                ? `document:format:${patch.field}`
+                : patch.action === 'setSlide'
+                  ? `slide:${patch.slideId}:${patch.field}`
+                  : patch.action === 'setPage'
+                    ? `page:${patch.pageId}:${patch.field}`
+                    : patch.action === 'setCell'
+                      ? `cell:${patch.cell}`
+                      : patch.action === 'setCellStyle'
+                        ? `cellstyle:${patch.cell}:${patch.field}`
+                        : patch.action === 'addPage' || patch.action === 'deletePage'
+                          ? 'pages:list'
+                          : 'slides:list';
   if ((file.fieldRevisions?.[key] || 0) > baseRevision) {
     const conflict = new Error('This part of the file changed. Review the latest version.');
     conflict.code = 'REVISION_CONFLICT';
@@ -120,6 +132,9 @@ export function demoFileUpdate(roomId, fileId, { baseRevision, patch }) {
   let title = file.title;
   if (patch.action === 'rename') title = patch.value.trim();
   else if (patch.action === 'setBody') content.body = patch.value;
+  else if (patch.action === 'setCode') content.sources[patch.language] = patch.value;
+  else if (patch.action === 'setCodeLanguage') content.language = patch.language;
+  else if (patch.action === 'setCodeStdin') content.stdin = patch.value;
   else if (patch.action === 'setFormat') {
     content.format ||= {};
     content.format[patch.field] = patch.value;
@@ -227,7 +242,7 @@ export function demoFileRestore(roomId, fileId, revision, _operationId, expected
 export function demoFileContributions(roomId, fileId) {
   const { items } = demoFileHistory(roomId, fileId);
   const file = read()[fileId];
-  const areas = file.type === 'slides' ? (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title || 'Untitled slide' })) : file.type === 'notebook' ? (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title || 'Untitled page' })) : [{ id: file.type === 'document' ? 'document' : 'spreadsheet', label: file.type === 'document' ? 'Document' : 'Spreadsheet' }];
+  const areas = file.type === 'slides' ? (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title || 'Untitled slide' })) : file.type === 'notebook' ? (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title || 'Untitled page' })) : [{ id: file.type === 'document' ? 'document' : file.type === 'code' ? 'code' : 'spreadsheet', label: file.type === 'document' ? 'Document' : file.type === 'code' ? 'Code' : 'Spreadsheet' }];
   const snapshots = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}')[fileId] || [];
   const assignments = JSON.parse(localStorage.getItem('synkro.demo.file-assignments.v1') || '{}')[fileId] || {};
   const editCount = snapshots.filter((row) => row.kind !== 'initial').length;

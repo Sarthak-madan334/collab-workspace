@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { assert, error, publicError } from './errors.js';
 import { object, revisionParam } from './validation.js';
 
-export function createApp(config, { db, auth, rooms, notes, files, limiter, ready = () => true }) {
+export function createApp(config, { db, auth, rooms, notes, files, codeRunner, limiter, ready = () => true }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
@@ -104,6 +104,13 @@ export function createApp(config, { db, auth, rooms, notes, files, limiter, read
     return { status: 201, data: await files.create(request.token, request.params.roomId, request.body) };
   }));
   app.get('/api/v1/rooms/:roomId/files/:fileId', route((request) => files.get(request.actor.user._id, request.params.roomId, request.params.fileId)));
+  app.post('/api/v1/rooms/:roomId/files/:fileId/run', route(async (request) => {
+    limiter.check(`code-run:${request.actor.user._id}`, 5, 60 * 1000);
+    assert(codeRunner, 503, 'CODE_RUNNER_UNAVAILABLE', 'Code execution is not configured');
+    const { file } = await files.get(request.actor.user._id, request.params.roomId, request.params.fileId);
+    assert(file.type === 'code', 422, 'VALIDATION_FAILED', 'Run is available for code workspaces');
+    return { data: await codeRunner.run(request.body) };
+  }));
   app.post('/api/v1/rooms/:roomId/files/:fileId/ops', route((request) => {
     limiter.check(`file-edit:${request.actor.user._id}:${request.params.roomId}`, 120, 60 * 1000);
     return files.update(request.token, request.params.roomId, request.params.fileId, request.body);

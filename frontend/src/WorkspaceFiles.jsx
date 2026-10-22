@@ -6,6 +6,7 @@ import {
   Presentation,
   Table2,
   NotebookTabs,
+  Code2,
   Plus,
   Play,
   X,
@@ -20,7 +21,9 @@ import {
 import { fileApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { evaluateCell } from './sheet-formulas.js';
+import { CodeEditor } from './CodeEditor.jsx';
 import './workspace-files.css';
+import './code-editor.css';
 
 const kinds = {
   document: {
@@ -42,6 +45,11 @@ const kinds = {
     label: 'Spreadsheet',
     icon: Table2,
     description: 'Work with tables, numbers, and formulas.',
+  },
+  code: {
+    label: 'Code workspace',
+    icon: Code2,
+    description: 'Write, run, and share Python or C++ code.',
   },
 };
 
@@ -966,6 +974,7 @@ function SheetEditor({ file, read, edit, commit }) {
 function versionPreviewText(type, version) {
   const content = version.content || {};
   if (type === 'document') return content.body || 'This version has no text yet.';
+  if (type === 'code') return `Python\n${content.sources?.python || ''}\n\nC++\n${content.sources?.cpp || ''}`;
   if (type === 'slides') return (content.slides || []).map((slide, index) => `${index + 1}. ${slide.title || 'Untitled slide'}\n${slide.body || 'No slide text'}`).join('\n\n') || 'No slides in this version.';
   if (type === 'notebook') return (content.pages || []).map((page) => `${page.title || 'Untitled page'}\n${page.body || 'No page text'}`).join('\n\n') || 'No pages in this version.';
   const cells = Object.entries(content.cells || {});
@@ -1292,6 +1301,7 @@ export function FileEditor({ token, userId }) {
         <SlidesEditor file={file} read={read} edit={edit} commit={save} perform={perform} />
       )}
       {file.type === 'sheet' && <SheetEditor file={file} read={read} edit={edit} commit={save} />}
+      {file.type === 'code' && <CodeEditor file={file} token={token} roomId={roomId} fileId={fileId} read={read} edit={edit} perform={perform} />}
     </main>
   );
 }

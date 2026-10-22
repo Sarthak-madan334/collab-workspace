@@ -5,6 +5,7 @@ import { createAuthService } from './auth.js';
 import { createRoomService } from './rooms.js';
 import { createNoteService } from './notes.js';
 import { createFileService } from './files.js';
+import { createCodeRunner } from './code-runner.js';
 import { RoomQueue } from './queue.js';
 import { RateLimiter } from './rate-limit.js';
 import { Presence } from './presence.js';
@@ -22,7 +23,8 @@ const auth = createAuthService(db, client, config, (sessionId) => socketServer?.
 const rooms = createRoomService(db, client, auth, queue);
 const notes = createNoteService(db, client, auth, rooms, queue, (event, payload) => socketServer?.publish(event, payload));
 const files = createFileService(db, client, auth, rooms, queue, (event, payload) => socketServer?.publish(event, payload));
-const app = createApp(config, { db, auth, rooms, notes, files, limiter, ready: () => ready });
+const codeRunner = createCodeRunner(config);
+const app = createApp(config, { db, auth, rooms, notes, files, codeRunner, limiter, ready: () => ready });
 const httpServer = createServer(app);
 socketServer = createSocketServer(httpServer, config, { auth, rooms, notes, queue, presence, limiter, ready: () => ready });
 httpServer.listen(config.port, '0.0.0.0', () => console.log(`Synkro server listening on ${config.port}`));

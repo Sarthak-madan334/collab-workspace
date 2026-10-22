@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { applyFilePatch, initialFileContent } from '../src/files.js';
+import { applyFilePatch, initialFileContent, validatePatch } from '../src/files.js';
 
 const makeFile = (type) => ({
   _id: new ObjectId(),
@@ -177,4 +177,28 @@ test('document formatting and cell formatting merge with edits to other fields',
     0,
   );
   assert.deepEqual(formatted.content.styles.A1, { bold: true });
+});
+
+test('code files keep Python and C++ drafts independently and reject stale edits to the same language', () => {
+  const file = makeFile('code');
+  const python = applyFilePatch(file, { action: 'setCode', language: 'python', value: 'print(2 + 2)' }, 0);
+  const cpp = applyFilePatch(python, { action: 'setCode', language: 'cpp', value: '#include <iostream>' }, 0);
+  assert.equal(cpp.content.sources.python, 'print(2 + 2)');
+  assert.equal(cpp.content.sources.cpp, '#include <iostream>');
+  assert.throws(() => applyFilePatch(cpp, { action: 'setCode', language: 'python', value: 'print(0)' }, 0), {
+    code: 'REVISION_CONFLICT',
+  });
+  const selected = applyFilePatch(cpp, { action: 'setCodeLanguage', language: 'cpp' }, 0);
+  assert.equal(selected.content.language, 'cpp');
+  const withInput = applyFilePatch(selected, { action: 'setCodeStdin', value: 'hello' }, 1);
+  assert.equal(withInput.content.stdin, 'hello');
+});
+
+test('code drafts are bounded by UTF-8 size', () => {
+  assert.throws(() => validatePatch('code', { action: 'setCode', language: 'python', value: 'é'.repeat(40_000) }), {
+    code: 'PAYLOAD_TOO_LARGE',
+  });
+  assert.throws(() => validatePatch('code', { action: 'setCodeLanguage', language: 'rust' }), {
+    code: 'VALIDATION_FAILED',
+  });
 });

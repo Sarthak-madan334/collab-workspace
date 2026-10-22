@@ -20,7 +20,10 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
     contributions: async (_userId, roomId, fileId) => ({ areas: [{ roomId, fileId }] }),
     assign: async (_token, roomId, fileId, payload) => ({ areas: [{ roomId, fileId, ...payload }] }),
   };
-  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, files, limiter: new RateLimiter(), ready: () => ready });
+  const codeRunner = { run: async (payload) => ({ status: 'Accepted', stdout: `${payload.language} output`, stderr: '', compileOutput: '', time: '0.001', memory: 1000 }) };
+  let runFileType = 'code';
+  files.get = async (_userId, roomId, fileId) => ({ file: { roomId, fileId, type: runFileType } });
+  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, files, codeRunner, limiter: new RateLimiter(), ready: () => ready });
   const server = createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -50,6 +53,12 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   assert.equal(restoreFile.body.data.file.expectedRevision, 2);
   const contributionMap = await fetchJson('/api/v1/rooms/room/files/file/contributions', { headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173' } });
   assert.equal(contributionMap.body.data.areas.length, 1);
+  const run = await fetchJson('/api/v1/rooms/room/files/file/run', { method: 'POST', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ language: 'python', source: 'print(1 + 1)', stdin: '' }) });
+  assert.equal(run.response.status, 200);
+  assert.equal(run.body.data.stdout, 'python output');
+  runFileType = 'document';
+  const wrongFileType = await fetchJson('/api/v1/rooms/room/files/file/run', { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' }, body: JSON.stringify({ language: 'python', source: 'print(1)' }) });
+  assert.equal(wrongFileType.response.status, 422);
   const assignedArea = await fetchJson('/api/v1/rooms/room/files/file/assignments', { method: 'POST', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ areaId: 'document', assigneeId: null }) });
   assert.equal(assignedArea.body.data.areas[0].areaId, 'document');
   const google = await fetchJson('/api/v1/auth/google', { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: 'test' }) });

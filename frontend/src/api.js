@@ -130,3 +130,16 @@ export const fileApi = {
   contributions: (token, roomId, fileId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileContributions(roomId, fileId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/contributions`, { token }),
   assign: (token, roomId, fileId, areaId, assigneeId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileAssign(roomId, fileId, areaId, assigneeId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/assignments`, { token, method: 'POST', body: JSON.stringify({ areaId, assigneeId }) }),
 };
+
+export const compilerApi = {
+  run: (token, roomId, fileId, payload) => {
+    if (DEMO_MODE && token === DEMO_TOKEN) {
+      return Promise.reject(new ApiError('Sign in with an account to run code. Demo files are stored in this browser.', 'DEMO_COMPILER_UNAVAILABLE', 403));
+    }
+    return request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/run`, {
+      token,
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+};
