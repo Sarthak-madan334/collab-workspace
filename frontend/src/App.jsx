@@ -5,10 +5,10 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, MessageSquare, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
+  LockKeyhole, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi,
   Palette, X, Zap,
 } from 'lucide-react';
-import { authApi, roomApi } from './api.js';
+import { authApi, fileApi, roomApi } from './api.js';
 import { validateAuthFields } from './auth-validation.js';
 import { consumeGitHubCallback, createGitHubAuthorizationUrl } from './github-oauth.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
@@ -495,7 +495,6 @@ function AppFrame({ children }) {
       <Brand />
       <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open glass-panel' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className={`nav-link${location.pathname === '/dashboard' || location.pathname.startsWith('/rooms/') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Rooms</Link>
-        <Link to="/studio" className={`nav-link${location.pathname.startsWith('/studio') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><FileText size={15} /> Files</Link>
         <span className="nav-divider" />
         <ThemePicker />
         <span className="nav-divider theme-nav-divider" />
@@ -733,6 +732,7 @@ function Dashboard() {
   const newRoomButtonRef = useRef(null);
   const [dialog, setDialog] = useState('');
   const [roomName, setRoomName] = useState('');
+  const [createKind, setCreateKind] = useState('room');
   const [inviteCode, setInviteCode] = useState('');
   const [busyAction, setBusyAction] = useState('');
   const [message, setMessage] = useState('');
@@ -752,7 +752,19 @@ function Dashboard() {
 
   const createRoom = async (event) => {
     event.preventDefault(); setBusyAction('create'); setMessage('');
-    try { const result = await roomApi.create(session.token, roomName.trim()); const room = result.room || result; setRooms((current) => [room, ...current.filter((item) => item.id !== room.id)]); setDialog(''); navigate(`/rooms/${room.id}`, { state: { inviteCode: result.inviteCode } }); }
+    try {
+      const result = await roomApi.create(session.token, roomName.trim(), createKind === 'room' ? 'room' : 'file');
+      const room = result.room || result;
+      if (createKind === 'room') {
+        setRooms((current) => [room, ...current.filter((item) => item.id !== room.id)]);
+        setDialog('');
+        navigate(`/rooms/${room.id}`, { state: { inviteCode: result.inviteCode } });
+      } else {
+        const { file } = await fileApi.create(session.token, room.id, createKind, roomName.trim());
+        setDialog('');
+        navigate(`/studio/${room.id}/${file.id}`, { state: { inviteCode: result.inviteCode } });
+      }
+    }
     catch (err) { setMessage(err.message); }
     finally { setBusyAction(''); }
   };
@@ -778,9 +790,8 @@ function Dashboard() {
           </div>
         </div>
         <div className="section-actions">
-          <GlassButton onClick={() => navigate('/studio')}><FileText size={18} /> Create a file</GlassButton>
           <GlassButton onClick={() => { dismissGuide(); setMessage(''); setDialog('join'); }}><ArrowDownLeft size={19} /> Join a room</GlassButton>
-          <GlassButton ref={newRoomButtonRef} className={guideActive ? 'is-guide-target' : ''} variant="primary" onClick={() => { dismissGuide(); setMessage(''); setDialog('create'); }}><Plus size={20} /> New room</GlassButton>
+          <GlassButton ref={newRoomButtonRef} className={guideActive ? 'is-guide-target' : ''} variant="primary" onClick={() => { dismissGuide(); setMessage(''); setRoomName(''); setCreateKind('room'); setDialog('create'); }}><Plus size={20} /> Create new</GlassButton>
         </div>
       </div>
 
@@ -803,11 +814,22 @@ function Dashboard() {
 
     <section className="dashboard-bottom"><div className="bottom-note glass-panel"><div className="bottom-note-icon"><Zap size={16} /></div><div><strong>{DEMO_MODE ? 'A local preview space.' : 'Small edits, all in sync.'}</strong><p>{DEMO_MODE ? 'Demo changes are saved only in this browser.' : 'Updates travel with your room, so nobody has to ask for the latest copy.'}</p></div><span className="bottom-note-deco">✳</span></div><span className="dashboard-caption"><span className="status-dot" /> {DEMO_MODE ? 'Local sample content · not connected to a team' : 'Your spaces are private to you and your team.'}</span></section>
 
-    {dialog && <Modal title={dialog === 'create' ? 'Make a new room' : 'Join your team'} subtitle={dialog === 'create' ? 'Give this shared space a name. You can invite people after.' : 'Paste an invite code from someone in your team.'} onClose={() => setDialog('')}>
+    {dialog && <Modal title={dialog === 'create' ? 'What would you like to create?' : 'Join your team'} subtitle={dialog === 'create' ? 'Choose a workspace type, then give it a name.' : 'Paste an invite code from someone in your team.'} onClose={() => setDialog('')}>
       <form onSubmit={dialog === 'create' ? createRoom : joinRoom} className="modal-form" aria-busy={Boolean(busyAction)}>
-        {dialog === 'create' ? <label className="field-label">Room name<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required minLength={1} maxLength={80} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="e.g. Product studio" /></div></label> : <label className="field-label">Invite code<div className="input-wrap"><KeyRound size={16} /><input autoFocus required value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Paste your invite code" /></div></label>}
+        {dialog === 'create' ? <>
+          <div className="create-kind-grid" role="group" aria-label="Choose what to create">
+            {[
+              { id: 'room', label: 'Shared room', detail: 'A live space for team notes', Icon: Users },
+              { id: 'document', label: 'Document', detail: 'Write together, page by page', Icon: FileText },
+              { id: 'notebook', label: 'Notebook', detail: 'Organize notes into pages', Icon: NotebookTabs },
+              { id: 'slides', label: 'Presentation', detail: 'Build and present a deck', Icon: Presentation },
+              { id: 'sheet', label: 'Spreadsheet', detail: 'Track work in a grid', Icon: Table2 },
+            ].map(({ id, label, detail, Icon }) => <button key={id} type="button" className={`create-kind-option${createKind === id ? ' selected' : ''}`} aria-pressed={createKind === id} onClick={() => setCreateKind(id)}><Icon size={19} /><span><strong>{label}</strong><small>{detail}</small></span><span className="create-kind-check" aria-hidden="true">{createKind === id ? '✓' : ''}</span></button>)}
+          </div>
+          <label className="field-label">{createKind === 'room' ? 'Room name' : `${createKind === 'slides' ? 'Presentation' : createKind[0].toUpperCase() + createKind.slice(1)} name`}<div className="input-wrap"><FilePlus2 size={16} /><input autoFocus required minLength={1} maxLength={80} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder={createKind === 'room' ? 'e.g. Product studio' : `e.g. ${createKind === 'slides' ? 'Product launch' : 'Team project'}`} /></div></label>
+        </> : <label className="field-label">Invite code<div className="input-wrap"><KeyRound size={16} /><input autoFocus required value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Paste your invite code" /></div></label>}
         {message && <div className="form-error" role="alert">{message}</div>}
-        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating room…' : 'Joining room…'} /> : <>{dialog === 'create' ? 'Create room' : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
+        <div className="modal-actions"><GlassButton type="button" onClick={() => setDialog('')} disabled={Boolean(busyAction)}>Cancel</GlassButton><GlassButton variant="primary" disabled={Boolean(busyAction)}>{busyAction ? <ButtonLoader label={busyAction === 'create' ? 'Creating…' : 'Joining room…'} /> : <>{dialog === 'create' ? createKind === 'room' ? 'Create room' : `Create ${createKind === 'slides' ? 'presentation' : createKind}` : 'Join room'} <ArrowRight size={15} /></>}</GlassButton></div>
       </form>
     </Modal>}
   </>;

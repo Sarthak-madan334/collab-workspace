@@ -530,6 +530,7 @@ function NotebookEditor({ file, read, edit, commit, perform }) {
 function SlidesEditor({ file, read, edit, commit, perform }) {
   const [active, setActive] = useState(null);
   const [present, setPresent] = useState(false);
+  const [ribbonTab, setRibbonTab] = useState('Home');
   const slides = file.content.slides;
   const current = slides.find((slide) => slide.id === active) || slides[0];
   const dialog = useRef(null);
@@ -539,6 +540,16 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
   }, [present]);
   const slideField = (field) => `slide:${current.id}:${field}`;
   const theme = read(slideField('theme'), current.theme || 'paper');
+  const addSlide = () => {
+    const slideId = crypto.randomUUID();
+    setActive(slideId);
+    perform({ action: 'addSlide', slideId });
+  };
+  const duplicateSlide = () => {
+    const slideId = crypto.randomUUID();
+    setActive(slideId);
+    perform({ action: 'duplicateSlide', sourceId: current.id, slideId });
+  };
   return (
     <div className="wf-slides">
       <aside className="wf-slide-sidebar">
@@ -552,25 +563,33 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
             className={`wf-slide-thumb${current.id === slide.id ? ' active' : ''}`}
             onClick={() => setActive(slide.id)}
           >
-            <span>{index + 1}</span>
-            <strong>{slide.title || 'Untitled slide'}</strong>
+            <span className="wf-slide-thumb-number">{index + 1}</span>
+            <span className={`wf-slide-thumb-preview wf-slide-theme-${slide.theme || 'paper'}`}>
+              <strong>{slide.title || 'Untitled slide'}</strong>
+              <small>{slide.body || 'Add slide content'}</small>
+            </span>
           </button>
         ))}
         <button
           type="button"
           className="wf-add-slide"
-          onClick={() => perform({ action: 'addSlide', slideId: crypto.randomUUID() })}
+          onClick={addSlide}
           disabled={slides.length >= 30}
         >
           <Plus size={16} /> Add slide
         </button>
       </aside>
       <div className="wf-slide-stage">
-        <div className="wf-editor-tools">
-          <span>SLIDE {slides.indexOf(current) + 1}</span>
+        <div className="wf-slide-ribbon-tabs" role="tablist" aria-label="Presentation tools">
+          {['Home', 'Insert', 'Design'].map((tab, index, tabs) => <button key={tab} type="button" role="tab" tabIndex={ribbonTab === tab ? 0 : -1} aria-selected={ribbonTab === tab} className={ribbonTab === tab ? 'active' : ''} onKeyDown={(event) => { if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); const offset = event.key === 'ArrowRight' ? 1 : -1; setRibbonTab(tabs[(index + offset + tabs.length) % tabs.length]); } }} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
+          <button type="button" onClick={() => setPresent(true)}><Play size={14} /> Present</button>
+        </div>
+        {ribbonTab === 'Home' && <div className="wf-editor-tools">
+          <span className="wf-slide-counter">Slide {slides.indexOf(current) + 1} of {slides.length}</span>
           <div>
             <button
               type="button"
+              aria-label="Move slide up"
               onClick={() =>
                 perform({
                   action: 'moveSlide',
@@ -580,10 +599,11 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
               }
               disabled={slides.indexOf(current) === 0}
             >
-              Move up
+              ↑
             </button>
             <button
               type="button"
+              aria-label="Move slide down"
               onClick={() =>
                 perform({
                   action: 'moveSlide',
@@ -593,23 +613,14 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
               }
               disabled={slides.indexOf(current) === slides.length - 1}
             >
-              Move down
+              ↓
             </button>
             <button
               type="button"
-              onClick={() =>
-                perform({
-                  action: 'duplicateSlide',
-                  sourceId: current.id,
-                  slideId: crypto.randomUUID(),
-                })
-              }
+              onClick={duplicateSlide}
               disabled={slides.length >= 30}
             >
               Duplicate
-            </button>
-            <button type="button" onClick={() => setPresent(true)}>
-              <Play size={15} /> Present
             </button>
             <button
               type="button"
@@ -622,9 +633,10 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
               Delete
             </button>
           </div>
-        </div>
-        <div className="wf-slide-design">
-          <label htmlFor="wf-slide-theme">Slide theme</label>
+        </div>}
+        {ribbonTab === 'Insert' && <div className="wf-editor-tools wf-slide-insert-tools"><span className="wf-slide-counter">Add content to your deck</span><div><button type="button" onClick={addSlide} disabled={slides.length >= 30}><Plus size={14} /> Blank slide</button><button type="button" onClick={duplicateSlide} disabled={slides.length >= 30}>Duplicate current</button></div></div>}
+        {ribbonTab === 'Design' && <div className="wf-slide-design">
+          <label htmlFor="wf-slide-theme">Theme</label>
           <select
             id="wf-slide-theme"
             value={theme}
@@ -642,7 +654,8 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
               </option>
             ))}
           </select>
-        </div>
+        </div>}
+        <div className="wf-slide-workspace">
         <div className={`wf-slide-canvas wf-slide-theme-${theme}`}>
           <input
             aria-label="Slide title"
@@ -673,8 +686,9 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
             onBlur={() => commit(slideField('body'))}
           />
         </div>
+        </div>
         <div className="wf-slide-notes">
-          <label htmlFor="wf-speaker-notes">Speaker notes</label>
+          <label htmlFor="wf-speaker-notes"><span>Speaker notes</span><small>Notes are visible to presenters only</small></label>
           <textarea
             id="wf-speaker-notes"
             maxLength={10000}
@@ -695,6 +709,10 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
         className={`wf-present wf-slide-theme-${theme}`}
         ref={dialog}
         onClose={() => setPresent(false)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowRight' && slides.indexOf(current) < slides.length - 1) setActive(slides[slides.indexOf(current) + 1].id);
+          if (event.key === 'ArrowLeft' && slides.indexOf(current) > 0) setActive(slides[slides.indexOf(current) - 1].id);
+        }}
       >
         <button
           type="button"
@@ -704,11 +722,11 @@ function SlidesEditor({ file, read, edit, commit, perform }) {
         >
           <X />
         </button>
-        <span>
-          SLIDE {slides.indexOf(current) + 1} / {slides.length}
-        </span>
-        <h2>{read(slideField('title'), current.title)}</h2>
-        <p>{read(slideField('body'), current.body)}</p>
+        <div className="wf-present-canvas">
+          <h2>{read(slideField('title'), current.title)}</h2>
+          <p>{read(slideField('body'), current.body)}</p>
+        </div>
+        <span className="wf-present-count">{slides.indexOf(current) + 1} / {slides.length}</span>
         <div className="wf-present-actions">
           <button
             type="button"

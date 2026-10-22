@@ -241,6 +241,36 @@
 .app-shell .input-wrap input { color: #f3f5ef; font-size: 14px; }
 .app-shell .input-wrap input::placeholder { color: #a9b4aa; }
 .app-shell .modal-actions .button { min-height: 44px; font-size: 13px; }
+
+.create-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 2px 0 3px;
+}
+.create-kind-option {
+  display: flex;
+  min-width: 0;
+  min-height: 66px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  color: #dfe5dd;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .035);
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.create-kind-option:hover { transform: translateY(-1px); border-color: rgba(198, 243, 91, .38); }
+.create-kind-option.selected { border-color: rgba(198, 243, 91, .72); background: rgba(198, 243, 91, .09); }
+.create-kind-option > svg { flex: 0 0 auto; color: #c6f35b; }
+.create-kind-option > span:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+.create-kind-option strong { font-size: 12px; }
+.create-kind-option small { overflow: hidden; color: #929a91; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.create-kind-check { display: grid; width: 18px; height: 18px; flex: 0 0 auto; place-items: center; margin-left: auto; color: #c6f35b; font-size: 12px; }
+@media (max-width: 520px) { .create-kind-grid { grid-template-columns: 1fr; max-height: 38vh; overflow: auto; } }
 .app-shell .invite-code-box span { color: #e9f5d6; font-size: 12px; }
 .app-shell .invite-note { color: #b5c1b5; font-size: 11px; }
 .app-shell .invite-note svg { color: var(--lime); }
