@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { assert, error, publicError } from './errors.js';
 import { object, revisionParam } from './validation.js';
 
-export function createApp(config, { db, auth, rooms, notes, files, codeRunner, limiter, ready = () => true }) {
+export function createApp(config, { db, auth, rooms, notes, files, codeRunner, ai, limiter, ready = () => true }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
@@ -95,6 +95,14 @@ export function createApp(config, { db, auth, rooms, notes, files, codeRunner, l
   }));
   app.get('/api/v1/rooms/:roomId', route((request) => rooms.get(request.actor.user._id, request.params.roomId)));
   app.get('/api/v1/rooms/:roomId/note', route((request) => rooms.note(request.actor.user._id, request.params.roomId)));
+  app.post('/api/v1/rooms/:roomId/ai/insights', route((request) => {
+    assert(ai, 503, 'AI_NOT_CONFIGURED', 'AI is not configured. Add GROQ_API_KEY to the server environment.');
+    return ai.insights(request.actor, request.params.roomId, request.body || {});
+  }));
+  app.post('/api/v1/rooms/:roomId/ai/chat', route((request) => {
+    assert(ai, 503, 'AI_NOT_CONFIGURED', 'AI is not configured. Add GROQ_API_KEY to the server environment.');
+    return ai.chat(request.actor, request.params.roomId, request.body || {});
+  }));
   app.get('/api/v1/rooms/:roomId/files', route((request) => {
     exactQuery(request.query, []);
     return files.list(request.actor.user._id, request.params.roomId);

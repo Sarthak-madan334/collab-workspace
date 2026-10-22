@@ -9,6 +9,8 @@ export function loadConfig(env = process.env) {
   const googleClientId = env.GOOGLE_CLIENT_ID?.trim() || null;
   const githubClientId = env.GITHUB_CLIENT_ID?.trim() || null;
   const githubClientSecret = env.GITHUB_CLIENT_SECRET?.trim() || null;
+  const groqApiKey = env.GROQ_API_KEY?.trim() || null;
+  const groqModel = env.GROQ_MODEL?.trim() || 'openai/gpt-oss-20b';
   const codeRunnerUrl = (env.CODE_RUNNER_URL || 'https://wandbox.org/api').trim().replace(/\/$/, '');
   const origins = (env.CLIENT_ORIGINS ?? (production ? '' : 'http://localhost:5173'))
     .split(',').map((origin) => origin.trim()).filter(Boolean);
@@ -26,6 +28,7 @@ export function loadConfig(env = process.env) {
     (githubClientSecret && (githubClientSecret.length < 20 || githubClientSecret.length > 256 || /\s/.test(githubClientSecret)))) {
     throw new Error('GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must both be configured');
   }
+  if (groqModel.length > 100 || !/^[A-Za-z0-9._/-]+$/.test(groqModel)) throw new Error('GROQ_MODEL must be a valid model name');
   let runnerUrl;
   try { runnerUrl = new URL(codeRunnerUrl); } catch { throw new Error('CODE_RUNNER_URL must be a valid HTTPS URL'); }
   if (runnerUrl.protocol !== 'https:' || runnerUrl.username || runnerUrl.password || runnerUrl.search || runnerUrl.hash) {
@@ -45,6 +48,7 @@ export function loadConfig(env = process.env) {
     // Keep the web origins explicit; the native app still needs a valid bearer token.
     origins: new Set([...origins, 'https://localhost']), sessionTtlMs: sessionHours * 60 * 60 * 1000,
     trustProxyHops, logLevel: env.LOG_LEVEL || 'info', googleClientId, githubClientId, githubClientSecret,
+    groqApiKey, groqModel,
     codeRunnerUrl,
   };
 }

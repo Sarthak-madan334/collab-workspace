@@ -61,6 +61,11 @@ test('production config requires an exact HTTPS frontend origin', () => {
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: '123-test.apps.googleusercontent.com' }).googleClientId, '123-test.apps.googleusercontent.com');
   assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GOOGLE_CLIENT_ID: 'not-a-google-client' }), /GOOGLE_CLIENT_ID/);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).githubClientId, null);
+  assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com' }).groqApiKey, null);
+  const groq = loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GROQ_API_KEY: 'gsk-test-placeholder', GROQ_MODEL: 'openai/gpt-oss-20b' });
+  assert.equal(groq.groqApiKey, 'gsk-test-placeholder');
+  assert.equal(groq.groqModel, 'openai/gpt-oss-20b');
+  assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GROQ_MODEL: 'invalid model' }), /GROQ_MODEL/);
   assert.equal(loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GITHUB_CLIENT_ID: 'Ov23liExample', GITHUB_CLIENT_SECRET: 'secret-that-stays-on-the-server' }).githubClientId, 'Ov23liExample');
   assert.throws(() => loadConfig({ ...base, CLIENT_ORIGINS: 'https://example.com', GITHUB_CLIENT_ID: 'Ov23liExample' }), /GITHUB_CLIENT_ID/);
 });

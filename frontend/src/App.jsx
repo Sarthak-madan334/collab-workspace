@@ -12,12 +12,13 @@ import { authApi, fileApi, roomApi } from './api.js';
 import { validateAuthFields } from './auth-validation.js';
 import { consumeGitHubCallback, createGitHubAuthorizationUrl } from './github-oauth.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
-import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
+import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD, DEMO_TOKEN } from './demo.js';
 import { buildWhatsAppShareUrl } from './invite-links.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
 import FlowStage from './FlowStage.jsx';
 import { StudioHome, FileEditor } from './WorkspaceFiles.jsx';
+import WorkspaceAssistant from './WorkspaceAssistant.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
 
 const NativeBridge = lazy(() => import('./NativeBridge.jsx'));
@@ -1262,6 +1263,7 @@ function RoomPage() {
       <ConnectionStatus connection={connection} saveState={saveState} dirty={dirty} onRetry={retrySave} />
       <div className="presence-stack" aria-label={`${presence.length} people online`}>{presence.slice(0, 4).map((person, index) => <span key={person.id} className={`avatar avatar-presence avatar-color-${index % 4}`} title={person.name}>{userInitials(person.name)}</span>)}{presence.length > 4 && <span className="avatar avatar-overflow">+{presence.length - 4}</span>}</div>
       <button className="toolbar-button glass-panel" onClick={openHistory} aria-label="Open room history"><History size={15} /><span>History</span></button>
+      <WorkspaceAssistant token={session.token} roomId={roomId} disabled={session.token === DEMO_TOKEN} />
       {isOwner && <button className="toolbar-button glass-panel" onClick={loadInvite} aria-label="Manage room invitations"><Users size={15} /><span>Invite</span></button>}
     </div></div>
 

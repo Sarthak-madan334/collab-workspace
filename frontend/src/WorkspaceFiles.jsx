@@ -18,9 +18,11 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { fileApi, roomApi } from './api.js';
+import { DEMO_TOKEN } from './demo.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { evaluateCell } from './sheet-formulas.js';
 import { CodeEditor } from './CodeEditor.jsx';
+import WorkspaceAssistant from './WorkspaceAssistant.jsx';
 import './workspace-files.css';
 import './code-editor.css';
 
@@ -1275,6 +1277,7 @@ export function FileEditor({ token, userId }) {
           <button className="wf-share" type="button" onClick={showInvite}>
             <Users size={16} /> Share
           </button>
+          <WorkspaceAssistant token={token} roomId={roomId} activeFileId={fileId} launcherClassName="wf-share" disabled={token === DEMO_TOKEN} />
         </div>
       </div>
       {invite && (

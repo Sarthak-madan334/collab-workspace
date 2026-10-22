@@ -144,3 +144,16 @@ export const compilerApi = {
     });
   },
 };
+
+export const assistantApi = {
+  insights: (token, roomId, activeFileId) => request(`/rooms/${encodeURIComponent(roomId)}/ai/insights`, {
+    token,
+    method: 'POST',
+    body: JSON.stringify(activeFileId ? { activeFileId } : {}),
+  }),
+  chat: (token, roomId, question, activeFileId) => request(`/rooms/${encodeURIComponent(roomId)}/ai/chat`, {
+    token,
+    method: 'POST',
+    body: JSON.stringify({ question, ...(activeFileId ? { activeFileId } : {}) }),
+  }),
+};
