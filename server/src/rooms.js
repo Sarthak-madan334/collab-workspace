@@ -4,7 +4,7 @@ import { assert, isDuplicateKey } from './errors.js';
 import { encodeRoomCursor, inviteCode as validateInvite, limit, object, objectId, roomCursor, string } from './validation.js';
 import { transaction } from './db.js';
 
-export const roomShape = (room) => ({ id: room._id.toString(), name: room.name, ownerId: room.ownerId.toString(), createdAt: room.createdAt.toISOString() });
+export const roomShape = (room) => ({ id: room._id.toString(), name: room.name, kind: room.kind || 'room', ownerId: room.ownerId.toString(), createdAt: room.createdAt.toISOString() });
 export const noteShape = (note) => ({
   roomId: note.roomId.toString(), content: note.content, revision: note.revision,
   updatedBy: note.updatedBy.toString(), updatedAt: note.updatedAt.toISOString(),
@@ -29,16 +29,18 @@ export function createRoomService(db, client, auth, queue) {
   }
 
   async function create(token, payload) {
-    object(payload, ['name']);
+    object(payload, ['name', 'kind']);
     const name = string(payload.name, 'Room name', 1, 80);
+    const kind = payload.kind === undefined ? 'room' : payload.kind;
+    assert(['room', 'file'].includes(kind), 422, 'VALIDATION_FAILED', 'Invalid space type');
     const actor = await auth.authenticate(token);
     const roomId = new ObjectId();
     const now = new Date();
     const code = randomBytes(16).toString('base64url');
-    const room = { _id: roomId, name, ownerId: actor.user._id, inviteCode: code, inviteRedemptions: 0, createdAt: now, updatedAt: now };
+    const room = { _id: roomId, name, kind, ownerId: actor.user._id, inviteCode: code, inviteRedemptions: 0, createdAt: now, updatedAt: now };
     await transaction(client, async (session) => {
       await rooms.insertOne(room, { session });
-      await memberships.insertOne({ roomId, userId: actor.user._id, joinedAt: now }, { session });
+      await memberships.insertOne({ roomId, userId: actor.user._id, kind, joinedAt: now }, { session });
       await notes.insertOne({ roomId, content: '', revision: 0, updatedBy: actor.user._id, updatedAt: now }, { session });
       await versions.insertOne({
         roomId, revision: 0, content: '', authorId: actor.user._id, operationId: randomUUID(),
@@ -67,7 +69,7 @@ export function createRoomService(db, client, auth, queue) {
           assert(current, 404, 'INVALID_INVITE', 'Invite not found');
           await memberships.updateOne(
             { roomId: current._id, userId: actor.user._id },
-            { $setOnInsert: { roomId: current._id, userId: actor.user._id, joinedAt: new Date() } },
+            { $setOnInsert: { roomId: current._id, userId: actor.user._id, kind: current.kind || 'room', joinedAt: new Date() } },
             { upsert: true, session },
           );
           return current;
@@ -87,7 +89,7 @@ export function createRoomService(db, client, auth, queue) {
   async function list(userId, query) {
     const max = limit(query.limit);
     const cursor = roomCursor(query.cursor);
-    const filter = { userId: typeof userId === 'string' ? objectId(userId) : userId };
+    const filter = { userId: typeof userId === 'string' ? objectId(userId) : userId, kind: { $ne: 'file' } };
     if (cursor) filter.$or = [
       { joinedAt: { $lt: cursor.joinedAt } },
       { joinedAt: cursor.joinedAt, _id: { $lt: cursor.id } },

@@ -1,9 +1,9 @@
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext } from 'react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
-  Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, Fingerprint, GitBranch, Globe2,
+  Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
   LockKeyhole, MessageSquare, Monitor, PenLine, Plus, Play, Pause, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Users, Wifi,
   Palette, X, Zap,
@@ -16,6 +16,7 @@ import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
 import FlowStage from './FlowStage.jsx';
+import { StudioHome, FileEditor } from './WorkspaceFiles.jsx';
 import { ButtonLoader, ConnectionStatus, InlineLoader, PageLoader, SkeletonLoader } from './Loading.jsx';
 
 const NativeBridge = lazy(() => import('./NativeBridge.jsx'));
@@ -432,6 +433,7 @@ function AppFrame({ children }) {
   const shellRef = useRef(null);
   const topbarRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const logout = async () => { await signOut(); navigate('/login', { replace: true }); };
 
   useEffect(() => {
@@ -492,7 +494,8 @@ function AppFrame({ children }) {
     <header ref={topbarRef} className="topbar glass-panel">
       <Brand />
       <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open glass-panel' : ''}`} aria-label="Main navigation">
-        <Link to="/dashboard" className="nav-link active" onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Workspace</Link>
+        <Link to="/dashboard" className={`nav-link${location.pathname === '/dashboard' || location.pathname.startsWith('/rooms/') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Rooms</Link>
+        <Link to="/studio" className={`nav-link${location.pathname.startsWith('/studio') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><FileText size={15} /> Files</Link>
         <span className="nav-divider" />
         <ThemePicker />
         <span className="nav-divider theme-nav-divider" />
@@ -755,7 +758,7 @@ function Dashboard() {
   };
   const joinRoom = async (event) => {
     event.preventDefault(); setBusyAction('join'); setMessage('');
-    try { const result = await roomApi.join(session.token, inviteCode.trim()); const room = result.room || result; setDialog(''); navigate(`/rooms/${room.id}`); }
+    try { const result = await roomApi.join(session.token, inviteCode.trim()); const room = result.room || result; setDialog(''); navigate(room.kind === 'file' ? '/studio' : `/rooms/${room.id}`); }
     catch (err) { setMessage(err.message); }
     finally { setBusyAction(''); }
   };
@@ -775,6 +778,7 @@ function Dashboard() {
           </div>
         </div>
         <div className="section-actions">
+          <GlassButton onClick={() => navigate('/studio')}><FileText size={18} /> Create a file</GlassButton>
           <GlassButton onClick={() => { dismissGuide(); setMessage(''); setDialog('join'); }}><ArrowDownLeft size={19} /> Join a room</GlassButton>
           <GlassButton ref={newRoomButtonRef} className={guideActive ? 'is-guide-target' : ''} variant="primary" onClick={() => { dismissGuide(); setMessage(''); setDialog('create'); }}><Plus size={20} /> New room</GlassButton>
         </div>
@@ -1185,6 +1189,9 @@ function RoomPage() {
 }
 
 function NotFound() { return <AppFrame><div className="not-found glass-panel"><span className="section-kicker">NOT THIS WAY</span><h1>This page got lost.</h1><p>Let’s get you back to your team's spaces.</p><Link className="button button-primary" to="/dashboard">Back to workspace <ArrowRight size={15} /></Link></div></AppFrame>; }
+
+function StudioHomeRoute() { const { session } = useSession(); return <StudioHome token={session.token} />; }
+function FileEditorRoute() { const { session } = useSession(); return <FileEditor token={session.token} />; }
 
 const REPOSITORY_URL = 'https://github.com/Sarthak-madan334/collab-workspace';
 
@@ -1674,6 +1681,8 @@ export default function App() {
     <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
     <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
     <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
+    <Route path="/studio" element={<Protected><AppFrame><StudioHomeRoute /></AppFrame></Protected>} />
+    <Route path="/studio/:roomId/:fileId" element={<Protected><AppFrame><FileEditorRoute /></AppFrame></Protected>} />
     <Route path="*" element={<NotFound />} />
   </Routes></AuthContext></ThemeProvider>;
 }

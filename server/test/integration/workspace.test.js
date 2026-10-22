@@ -8,6 +8,7 @@ import { connectDatabase } from '../../src/db.js';
 import { createAuthService } from '../../src/auth.js';
 import { createRoomService } from '../../src/rooms.js';
 import { createNoteService } from '../../src/notes.js';
+import { createFileService } from '../../src/files.js';
 import { createApp } from '../../src/app.js';
 import { createSocketServer } from '../../src/socket.js';
 import { RoomQueue } from '../../src/queue.js';
@@ -29,7 +30,8 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   const auth = createAuthService(db, client, config, (id) => sockets?.revoke(id));
   const rooms = createRoomService(db, client, auth, queue);
   const notes = createNoteService(db, client, auth, rooms, queue, (event, payload) => sockets?.publish(event, payload));
-  const server = createServer(createApp(config, { db, auth, rooms, notes, limiter }));
+  const files = createFileService(db, client, auth, rooms, queue, (event, payload) => sockets?.publish(event, payload));
+  const server = createServer(createApp(config, { db, auth, rooms, notes, files, limiter }));
   sockets = createSocketServer(server, config, { auth, rooms, notes, queue, presence, limiter });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => {
@@ -60,6 +62,28 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.equal(await db.collection('memberships').countDocuments({}), 2);
   assert.equal((await request(`/rooms/${roomId}/invite`, 'GET', bob.token)).status, 403);
   assert.equal((await request('/rooms/join', 'POST', bob.token, { inviteCode: created.data.inviteCode })).status, 200);
+  const privateRoom = await request('/rooms', 'POST', alice.token, { name: 'Private files' });
+  const privateRoomId = privateRoom.data.room.id;
+  assert.equal((await request(`/rooms/${privateRoomId}/files`, 'GET', bob.token)).status, 404);
+  assert.equal((await request(`/rooms/${privateRoomId}/files`, 'POST', bob.token, { type: 'document', title: 'Blocked' })).status, 404);
+  const sheet = await request(`/rooms/${roomId}/files`, 'POST', alice.token, { type: 'sheet', title: 'Budget' });
+  assert.equal(sheet.status, 201);
+  const sheetId = sheet.data.file.id;
+  const cellA = await request(`/rooms/${roomId}/files/${sheetId}/ops`, 'POST', alice.token, { operationId: randomUUID(), baseRevision: 0, patch: { action: 'setCell', cell: 'A1', value: '40' } });
+  assert.equal(cellA.status, 200);
+  const cellB = await request(`/rooms/${roomId}/files/${sheetId}/ops`, 'POST', bob.token, { operationId: randomUUID(), baseRevision: 0, patch: { action: 'setCell', cell: 'B1', value: '=A1*2' } });
+  assert.equal(cellB.status, 200);
+  assert.deepEqual((await request(`/rooms/${roomId}/files/${sheetId}`, 'GET', bob.token)).data.file.content.cells, { A1: '40', B1: '=A1*2' });
+  assert.equal((await request(`/rooms/${privateRoomId}/files/${sheetId}`, 'GET', bob.token)).status, 404);
+  const fileSpace = await request('/rooms', 'POST', alice.token, { name: 'Team notebook', kind: 'file' });
+  assert.equal(fileSpace.status, 201);
+  const notebook = await request(`/rooms/${fileSpace.data.room.id}/files`, 'POST', alice.token, { type: 'notebook', title: 'Team notebook' });
+  assert.equal(notebook.status, 201);
+  assert.equal((await request('/files', 'GET', alice.token)).data.items[0].type, 'notebook');
+  assert.equal((await request('/files', 'GET', bob.token)).data.items.length, 0);
+  assert.equal((await request('/rooms?limit=100', 'GET', alice.token)).data.items.some((item) => item.id === fileSpace.data.room.id), false);
+  assert.equal((await request('/rooms/join', 'POST', bob.token, { inviteCode: fileSpace.data.inviteCode })).data.room.kind, 'file');
+  assert.equal((await request('/files', 'GET', bob.token)).data.items[0].id, notebook.data.file.id);
   const connect = async (token) => {
     const socket = createClient(base, { auth: { token }, transports: ['websocket'], extraHeaders: { Origin: 'http://localhost:5173' } });
     await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });

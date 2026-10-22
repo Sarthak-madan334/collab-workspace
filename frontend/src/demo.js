@@ -44,9 +44,9 @@ export function demoInvite(roomId) {
   return invites[roomId] || 'SYNKRO-A04-DEMO';
 }
 
-export function demoCreateRoom(name) {
+export function demoCreateRoom(name, kind = 'room') {
   const rooms = demoRooms();
-  const room = { id: `demo-${crypto.randomUUID()}`, name, ownerId: DEMO_USER.id, createdAt: new Date().toISOString() };
+  const room = { id: `demo-${crypto.randomUUID()}`, name, kind, ownerId: DEMO_USER.id, createdAt: new Date().toISOString() };
   write(ROOM_KEY, [room, ...rooms]);
   const note = { roomId: room.id, content: '', revision: 0, updatedBy: DEMO_USER.id, updatedAt: room.createdAt };
   write(NOTE_KEY, { ...read(NOTE_KEY, { [initialRoom.id]: initialNote }), [room.id]: note });

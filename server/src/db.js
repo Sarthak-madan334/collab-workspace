@@ -17,9 +17,12 @@ export async function connectDatabase(config) {
       db.collection('rooms').createIndex({ ownerId: 1 }),
       db.collection('memberships').createIndex({ roomId: 1, userId: 1 }, { unique: true }),
       db.collection('memberships').createIndex({ userId: 1, joinedAt: -1, _id: -1 }),
+      db.collection('memberships').createIndex({ userId: 1, kind: 1, joinedAt: -1 }),
       db.collection('notes').createIndex({ roomId: 1 }, { unique: true }),
       db.collection('versions').createIndex({ roomId: 1, revision: -1 }, { unique: true }),
       db.collection('versions').createIndex({ roomId: 1, operationId: 1 }, { unique: true }),
+      db.collection('files').createIndex({ roomId: 1, updatedAt: -1 }),
+      db.collection('fileOperations').createIndex({ fileId: 1, operationId: 1 }, { unique: true }),
     ]);
     return { client, db };
   } catch (err) {

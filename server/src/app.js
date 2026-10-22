@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { assert, error, publicError } from './errors.js';
 import { object, revisionParam } from './validation.js';
 
-export function createApp(config, { db, auth, rooms, notes, limiter, ready = () => true }) {
+export function createApp(config, { db, auth, rooms, notes, files, limiter, ready = () => true }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
@@ -89,8 +89,25 @@ export function createApp(config, { db, auth, rooms, notes, limiter, ready = () 
     limiter.check(`invite:${request.actor.user._id}`, 10, 60 * 1000);
     return rooms.join(request.token, request.body);
   }));
+  app.get('/api/v1/files', route((request) => {
+    exactQuery(request.query, []);
+    return files.listMine(request.actor.user._id);
+  }));
   app.get('/api/v1/rooms/:roomId', route((request) => rooms.get(request.actor.user._id, request.params.roomId)));
   app.get('/api/v1/rooms/:roomId/note', route((request) => rooms.note(request.actor.user._id, request.params.roomId)));
+  app.get('/api/v1/rooms/:roomId/files', route((request) => {
+    exactQuery(request.query, []);
+    return files.list(request.actor.user._id, request.params.roomId);
+  }));
+  app.post('/api/v1/rooms/:roomId/files', route(async (request) => {
+    limiter.check(`file-create:${request.actor.user._id}`, 20, 60 * 1000);
+    return { status: 201, data: await files.create(request.token, request.params.roomId, request.body) };
+  }));
+  app.get('/api/v1/rooms/:roomId/files/:fileId', route((request) => files.get(request.actor.user._id, request.params.roomId, request.params.fileId)));
+  app.post('/api/v1/rooms/:roomId/files/:fileId/ops', route((request) => {
+    limiter.check(`file-edit:${request.actor.user._id}:${request.params.roomId}`, 120, 60 * 1000);
+    return files.update(request.token, request.params.roomId, request.params.fileId, request.body);
+  }));
   app.get('/api/v1/rooms/:roomId/invite', route((request) => rooms.invite(request.actor.user._id, request.params.roomId)));
   app.post('/api/v1/rooms/:roomId/invite/rotate', route((request) => {
     limiter.check(`invite:${request.actor.user._id}`, 10, 60 * 1000);

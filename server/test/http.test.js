@@ -8,7 +8,14 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   let ready = true;
   const config = { origins: new Set(['http://localhost:5173', 'https://localhost']), trustProxyHops: 0, logLevel: 'silent' };
   const auth = { authenticate: async () => ({ user: { _id: 'user' } }), me: async () => ({ user: { id: 'user' } }), loginGoogle: async ({ credential }) => ({ token: credential }), loginGitHub: async ({ code }, origin) => ({ token: code, origin }) };
-  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, limiter: new RateLimiter(), ready: () => ready });
+  const files = {
+    listMine: async () => ({ items: [] }),
+    list: async (userId, roomId) => ({ items: [{ userId, roomId }] }),
+    create: async (_token, roomId, payload) => ({ file: { roomId, ...payload } }),
+    get: async (_userId, roomId, fileId) => ({ file: { roomId, fileId } }),
+    update: async (_token, roomId, fileId, payload) => ({ file: { roomId, fileId, ...payload } }),
+  };
+  const app = createApp(config, { db: { command: async () => ({ ok: 1 }) }, auth, rooms: {}, notes: {}, files, limiter: new RateLimiter(), ready: () => ready });
   const server = createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -23,6 +30,13 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   assert.equal(unauthed.response.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5173');
   assert.equal(unauthed.response.headers.get('Cache-Control'), 'no-store');
   assert.equal(unauthed.response.headers.get('X-Content-Type-Options'), 'nosniff');
+  assert.equal((await fetchJson('/api/v1/rooms/room/files')).response.status, 401);
+  const filesList = await fetchJson('/api/v1/rooms/room/files', { headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173' } });
+  assert.equal(filesList.response.status, 200);
+  assert.equal(filesList.body.data.items[0].roomId, 'room');
+  const newFile = await fetchJson('/api/v1/rooms/room/files', { method: 'POST', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'document', title: 'Brief' }) });
+  assert.equal(newFile.response.status, 201);
+  assert.equal(newFile.body.data.file.title, 'Brief');
   const google = await fetchJson('/api/v1/auth/google', { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: 'test' }) });
   assert.equal(google.response.status, 200);
   assert.equal(google.body.data.token, 'test');

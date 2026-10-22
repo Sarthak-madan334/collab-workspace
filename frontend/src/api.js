@@ -4,6 +4,7 @@ import {
   demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
 } from './demo.js';
 import { IS_ANDROID } from './native-session.js';
+import { demoFileCreate, demoFileGet, demoFileList, demoFileListMine, demoFileUpdate } from './file-demo.js';
 
 export class ApiError extends Error {
   constructor(message, code, status) {
@@ -56,10 +57,10 @@ export const authApi = {
 };
 
 export const roomApi = {
-  list: (token) => (DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve({ items: demoRooms() }) : request('/rooms?limit=100', { token })),
-  create: (token, name) => {
-    if (DEMO_MODE && token === DEMO_TOKEN) return Promise.resolve(demoCreateRoom(name));
-    return request('/rooms', { token, method: 'POST', body: JSON.stringify({ name }) });
+  list: (token) => (DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve({ items: demoRooms().filter((room) => room.kind !== 'file') }) : request('/rooms?limit=100', { token })),
+  create: (token, name, kind = 'room') => {
+    if (DEMO_MODE && token === DEMO_TOKEN) return Promise.resolve(demoCreateRoom(name, kind));
+    return request('/rooms', { token, method: 'POST', body: JSON.stringify({ name, kind }) });
   },
   join: (token, inviteCode) => {
     if (DEMO_MODE && token === DEMO_TOKEN) return Promise.resolve(demoJoinRoom(inviteCode));
@@ -107,4 +108,20 @@ export const roomApi = {
     if (DEMO_MODE && token === DEMO_TOKEN) return Promise.resolve(demoRestore(roomId, revision, operationId, expectedRevision));
     return request(`/rooms/${encodeURIComponent(roomId)}/versions/${revision}/restore`, { token, method: 'POST', body: JSON.stringify({ operationId, expectedRevision }) });
   },
+};
+
+export const fileApi = {
+  listMine: (token) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve({ items: demoFileListMine() }) : request('/files', { token }),
+  list: (token, roomId) => DEMO_MODE && token === DEMO_TOKEN
+    ? Promise.resolve({ items: demoFileList(roomId) })
+    : request(`/rooms/${encodeURIComponent(roomId)}/files`, { token }),
+  create: (token, roomId, type, title) => DEMO_MODE && token === DEMO_TOKEN
+    ? Promise.resolve(demoFileCreate(roomId, type, title))
+    : request(`/rooms/${encodeURIComponent(roomId)}/files`, { token, method: 'POST', body: JSON.stringify({ type, title }) }),
+  get: (token, roomId, fileId) => DEMO_MODE && token === DEMO_TOKEN
+    ? Promise.resolve(demoFileGet(roomId, fileId))
+    : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}`, { token }),
+  update: (token, roomId, fileId, change) => DEMO_MODE && token === DEMO_TOKEN
+    ? Promise.resolve(demoFileUpdate(roomId, fileId, change))
+    : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/ops`, { token, method: 'POST', body: JSON.stringify(change) }),
 };
