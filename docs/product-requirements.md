@@ -13,7 +13,7 @@
 | C07 | History and restore | Members browse saved revisions and preview their contents; the owner can restore one as a new revision visible to all clients. |
 | C08 | Reconnection | Rejoining fetches current content and membership; an unsent local draft is preserved for review and never replayed over newer content automatically. |
 | C09 | File version history | Documents, presentations, spreadsheets, and notebooks retain saved snapshots; members can preview history and the room owner can restore a snapshot as a new revision. |
-| C10 | Contribution map | Members agree on area ownership and see server-derived saved edits by document, sheet, slide, or notebook page without presenting activity as a performance score. |
+| C10 | FairShare work map | Members assign an owner and set To do, In progress, or Done for each document, sheet, code area, slide, or notebook page. The shared view summarizes completion and ownership coverage; server-derived saved edits remain activity context, not a performance score. |
 
 C01–C07 implement the proposal’s core features. C08 makes its reconnect-learning goal and consistency risk concrete. C09–C10 extend the workspace with recoverable file versions and agreed ownership visibility. Owner-only restore, invite codes, and plain text are documented implementation decisions.
 
@@ -60,6 +60,6 @@ All core acceptance cases in [testing](testing-and-validation.md) pass against t
 
 Every document, presentation, spreadsheet, and notebook keeps recoverable snapshots for each saved revision. A room owner can inspect a prior snapshot and restore it; restoration is recorded as a new revision, preserving the current and prior work.
 
-Each file also has an opt-in contribution map. Teammates can agree who owns the document, spreadsheet, an individual slide, or a notebook page. The map shows saved edits by area and contributor so teams can see what has been covered and where ownership is still open. Counts represent saved activity only and must not be presented as a measure of quality, effort, or performance.
+Each file also has a FairShare work map. Teammates can assign an owner and mark a document, spreadsheet, code area, individual slide, or notebook page as To do, In progress, or Done. The shared summary shows completion and how work ownership is distributed. Saved edits by area and contributor provide activity context only; they do not measure quality, effort, or performance. Updates are stored by the server and broadcast to room members.
 
-The first implementation uses whole-document and whole-sheet areas, individual slides and notebook pages, room membership checks, owner-only restore, and server-derived operation counts. Earlier edits made before file history was enabled cannot be reconstructed; opening history on such a file records its current state as the available baseline.
+The first implementation uses whole-document, whole-sheet, and whole-code areas, individual slides and notebook pages, room membership checks, owner-only restore, explicit team-set progress, and server-derived operation counts. Existing area records without a status default to To do. Earlier edits made before file history was enabled cannot be reconstructed; opening history on such a file records its current state as the available baseline.

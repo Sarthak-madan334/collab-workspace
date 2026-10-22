@@ -82,6 +82,15 @@ test('real HTTP, MongoDB transaction, and Socket.IO collaboration', { skip: !uri
   assert.equal(contributions.data.areas[0].contributors.length, 2);
   const assigned = await request(`/rooms/${roomId}/files/${sheetId}/assignments`, 'POST', alice.token, { areaId: 'spreadsheet', assigneeId: bob.user.id });
   assert.equal(assigned.data.areas[0].assigneeId, bob.user.id);
+  const inProgress = await request(`/rooms/${roomId}/files/${sheetId}/areas/spreadsheet/status`, 'POST', bob.token, { status: 'in_progress' });
+  assert.equal(inProgress.data.areas[0].status, 'in_progress');
+  const completed = await request(`/rooms/${roomId}/files/${sheetId}/areas/spreadsheet/status`, 'POST', alice.token, { status: 'done' });
+  assert.equal(completed.data.areas[0].status, 'done');
+  const savedWorkMap = await request(`/rooms/${roomId}/files/${sheetId}/contributions`, 'GET', bob.token);
+  assert.equal(savedWorkMap.data.areas[0].status, 'done');
+  assert.equal(savedWorkMap.data.areas[0].assigneeId, bob.user.id);
+  const invalidStatus = await request(`/rooms/${roomId}/files/${sheetId}/areas/spreadsheet/status`, 'POST', bob.token, { status: 'blocked' });
+  assert.equal(invalidStatus.status, 422);
   assert.equal((await request(`/rooms/${roomId}/files/${sheetId}/history/1/restore`, 'POST', bob.token, { operationId: randomUUID(), expectedRevision: 2 })).status, 403);
   const restoredFile = await request(`/rooms/${roomId}/files/${sheetId}/history/1/restore`, 'POST', alice.token, { operationId: randomUUID(), expectedRevision: 2 });
   assert.equal(restoredFile.data.file.revision, 3);

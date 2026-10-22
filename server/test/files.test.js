@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { applyFilePatch, initialFileContent, validatePatch } from '../src/files.js';
+import { applyFilePatch, initialFileContent, validatePatch, validateWorkStatus } from '../src/files.js';
 
 const makeFile = (type) => ({
   _id: new ObjectId(),
@@ -11,6 +11,14 @@ const makeFile = (type) => ({
   content: initialFileContent(type),
   fieldRevisions: {},
   revision: 0,
+});
+
+test('work-map progress accepts only the supported states', () => {
+  assert.equal(validateWorkStatus('todo'), 'todo');
+  assert.equal(validateWorkStatus('in_progress'), 'in_progress');
+  assert.equal(validateWorkStatus('done'), 'done');
+  assert.throws(() => validateWorkStatus('blocked'), { code: 'VALIDATION_FAILED' });
+  assert.throws(() => validateWorkStatus(null), { code: 'VALIDATION_FAILED' });
 });
 
 test('edits to different sheet cells merge across stale base revisions', () => {

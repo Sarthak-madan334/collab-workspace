@@ -1020,22 +1020,43 @@
 .wf-history-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 12px; padding: 4px 0; color: #c6f35b; border: 0; background: transparent; cursor: pointer; }
 .wf-version-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .wf-restore-action { min-height: 44px; padding: 0 16px; }
-.wf-contribution-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.wf-contribution-overview { margin-bottom: 8px; padding: 15px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 13px; background: linear-gradient(135deg, rgba(255,255,255,.045), rgba(255,255,255,.018)); }
+.wf-contribution-overview-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.wf-contribution-overview-head > span, .wf-contribution-workload > span:first-child { color: #9ca7a1; font: 10px ui-monospace, monospace; letter-spacing: .12em; }
+.wf-contribution-overview-head strong { color: #e9eee9; font-size: 14px; }
+.wf-contribution-overview-head small { color: #aeb8b4; font-size: 12px; font-weight: 400; }
+.wf-contribution-progress { display: block; width: 100%; height: 7px; margin-bottom: 12px; appearance: none; border: 0 solid; overflow: clip; border-radius: 999px; background: rgba(255,255,255,.1); }
+.wf-contribution-progress::-webkit-progress-bar { background: transparent; }
+.wf-contribution-progress::-webkit-progress-value { border-radius: 999px; background: linear-gradient(90deg, #9ec44c, #c6f35b); transition: inline-size .3s ease; }
+.wf-contribution-progress::-moz-progress-bar { border-radius: 999px; background: linear-gradient(90deg, #9ec44c, #c6f35b); transition: inline-size .3s ease; }
+.wf-contribution-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .wf-contribution-summary span { padding: 8px 11px; color: #aeb8b4; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 9px; background: rgba(255, 255, 255, 0.035); font-size: 12px; }
 .wf-contribution-summary strong { color: #e9eee9; }
+.wf-contribution-workload { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,.07); }
+.wf-owner-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; color: #dce4dc; border: 1px solid rgba(198,243,91,.16); border-radius: 999px; background: rgba(198,243,91,.055); font-size: 11px; }
+.wf-owner-chip small { color: #aeb8b4; font-size: 10px; }
 .wf-contribution-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 12px 2px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .wf-contribution-area { display: grid; gap: 5px; min-width: 0; }
 .wf-contribution-area strong { font-size: 13px; }
 .wf-contribution-area span { color: #929b99; font-size: 11px; line-height: 1.5; }
+.wf-contribution-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .wf-contribution-row label { display: flex; align-items: center; gap: 8px; color: #c6f35b; }
-.wf-contribution-row select { min-width: 135px; min-height: 38px; padding: 0 10px; color: #e7ece7; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 9px; background: #151719; }
+.wf-contribution-row select { min-width: 135px; min-height: 40px; padding: 0 10px; color: #e7ece7; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 9px; background: #151719; }
+.wf-contribution-row .wf-area-status { min-width: 120px; }
+.wf-area-status.is-done { color: #d8f69a; border-color: rgba(198,243,91,.32); }
+.wf-area-status.is-in_progress { color: #d5ded8; border-color: rgba(255,255,255,.22); }
 .wf-contribution-note { margin-top: 12px; font-size: 11px; }
 .wf-page :is(button, a, input, textarea, select):focus-visible { outline: 2px solid #c6f35b; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .wf-contribution-progress::-webkit-progress-value { transition: none; }
+  .wf-contribution-progress::-moz-progress-bar { transition: none; }
+}
 @media (max-width: 700px) {
   .wf-file-header { align-items: flex-start; flex-direction: column; }
   .wf-header-actions { flex-wrap: wrap; gap: 8px; }
   .wf-file-panel { padding: 17px 14px; }
-  .wf-contribution-row { align-items: flex-start; flex-direction: column; }
+  .wf-contribution-row { align-items: stretch; flex-direction: column; }
+  .wf-contribution-controls { justify-content: flex-start; }
   .wf-contribution-row select { min-width: 180px; }
 }
 .wf-word-page ::selection {

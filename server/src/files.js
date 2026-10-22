@@ -5,6 +5,7 @@ import { transaction } from './db.js';
 import { beforeRevision, limit, object, objectId, operationId, revision, string } from './validation.js';
 
 const TYPES = new Set(['document', 'slides', 'sheet', 'notebook', 'code']);
+const WORK_STATUSES = new Set(['todo', 'in_progress', 'done']);
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_CODE_BYTES = 64 * 1024;
 const cellPattern = /^[A-Z](?:[1-9]|[1-9]\d|100)$/;
@@ -13,6 +14,11 @@ const starterCode = {
   python: 'print("Hello from Synkro!")\n',
   cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from Synkro!" << std::endl;\n    return 0;\n}\n',
 };
+
+export function validateWorkStatus(status) {
+  assert(WORK_STATUSES.has(status), 422, 'VALIDATION_FAILED', 'Choose To do, In progress, or Done');
+  return status;
+}
 
 export const fileShape = (file) => ({
   id: file._id.toString(),
@@ -412,6 +418,17 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
   const memberships = db.collection('memberships');
   const users = db.collection('users');
 
+  async function saveAreaWork(fileId, areaId, fields, defaults) {
+    try {
+      await assignments.updateOne({ fileId, areaId }, { $set: fields, $setOnInsert: defaults }, { upsert: true });
+    } catch (failure) {
+      // Two collaborators can create the first area record at once; the unique index
+      // decides the winner, and the losing update should still apply its own fields.
+      if (failure?.code !== 11000) throw failure;
+      await assignments.updateOne({ fileId, areaId }, { $set: fields });
+    }
+  }
+
   function versionShape(row, authorName = 'Former member', includeContent = false) {
     return { revision: row.revision, authorId: row.authorId.toString(), authorName, kind: row.kind,
       createdAt: row.createdAt.toISOString(), restoredFromRevision: row.restoredFromRevision ?? null,
@@ -672,8 +689,13 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
     const memberUsers = await users.find({ _id: { $in: memberIds } }, { projection: { name: 1 } }).toArray();
     const members = memberUsers.map((member) => ({ id: member._id.toString(), name: member.name }));
     const memberSet = new Set(members.map((member) => member.id));
-    const areaMap = new Map(workAreas(file).map((area) => [area.id, { ...area, assigneeId: null, edits: 0, contributors: {} }]));
-    for (const row of assignedRows) if (areaMap.has(row.areaId) && memberSet.has(row.assigneeId?.toString())) areaMap.get(row.areaId).assigneeId = row.assigneeId.toString();
+    const areaMap = new Map(workAreas(file).map((area) => [area.id, { ...area, assigneeId: null, status: 'todo', edits: 0, contributors: {} }]));
+    for (const row of assignedRows) {
+      const area = areaMap.get(row.areaId);
+      if (!area) continue;
+      if (memberSet.has(row.assigneeId?.toString())) area.assigneeId = row.assigneeId.toString();
+      if (WORK_STATUSES.has(row.status)) area.status = row.status;
+    }
     const people = new Map(members.map((member) => [member.id, member.name]));
     const totals = new Map();
     for (const row of activityRows) {
@@ -705,10 +727,29 @@ export function createFileService(db, client, auth, rooms, queue, publish = () =
       const member = await memberships.findOne({ roomId: room._id, userId: assigneeId });
       assert(member, 404, 'NOT_FOUND', 'Teammate is not a member of this room');
     }
-    if (assigneeId) await assignments.updateOne({ fileId: fileObjectId, areaId }, { $set: { roomId: room._id, assigneeId, assignedBy: actor.user._id, updatedAt: new Date() } }, { upsert: true });
-    else await assignments.deleteOne({ fileId: fileObjectId, areaId });
+    await saveAreaWork(fileObjectId, areaId, {
+      roomId: room._id, assigneeId, assignedBy: actor.user._id, updatedAt: new Date(),
+    }, { status: 'todo' });
+    publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId });
     return contributions(actor.user._id, id.toString(), fileObjectId.toString());
   }
 
-  return { listMine, list, get, create, update, history, version, restore, contributions, assign };
+  async function updateAreaStatus(token, roomId, fileId, areaIdValue, payload) {
+    object(payload, ['status']);
+    const id = objectId(roomId), fileObjectId = objectId(fileId);
+    const areaId = string(areaIdValue, 'Work area', 1, 100);
+    const status = validateWorkStatus(payload.status);
+    const actor = await auth.authenticate(token);
+    const room = await rooms.access(actor.user._id, id);
+    const file = await files.findOne({ _id: fileObjectId, roomId: room._id });
+    assert(file, 404, 'NOT_FOUND', 'File not found');
+    assert(workAreas(file).some((area) => area.id === areaId), 404, 'NOT_FOUND', 'Work area no longer exists');
+    await saveAreaWork(fileObjectId, areaId, {
+      roomId: room._id, status, statusUpdatedBy: actor.user._id, updatedAt: new Date(),
+    }, { assigneeId: null });
+    publish('file:contributions-updated', { roomId: room._id.toString(), fileId: fileObjectId.toString(), areaId, status });
+    return contributions(actor.user._id, id.toString(), fileObjectId.toString());
+  }
+
+  return { listMine, list, get, create, update, history, version, restore, contributions, assign, updateAreaStatus };
 }

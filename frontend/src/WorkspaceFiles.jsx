@@ -16,7 +16,6 @@ import {
   History,
   FileClock,
   ArrowRight,
-  Check,
 } from 'lucide-react';
 import { fileApi, roomApi } from './api.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
@@ -69,6 +68,7 @@ function useFileEvents(token, roomId, onEvent) {
     socket.on('connect', join);
     socket.on('file:created', created);
     socket.on('file:updated', updated);
+    socket.on('file:contributions-updated', updated);
     socket.connect();
     return () => {
       socket.emit('room:leave', { roomId });
@@ -988,6 +988,7 @@ export function FileEditor({ token, userId }) {
   const [fileHistory, setFileHistory] = useState([]);
   const [previewVersion, setPreviewVersion] = useState(null);
   const [contributionMap, setContributionMap] = useState(null);
+  const [updatingArea, setUpdatingArea] = useState('');
   const [panelBusy, setPanelBusy] = useState(false);
   const [panelError, setPanelError] = useState('');
   const draftRef = useRef({});
@@ -1038,6 +1039,9 @@ export function FileEditor({ token, userId }) {
   }, [token, roomId, fileId, receive]);
   useFileEvents(token, roomId, (event) => {
     if (event.file?.id === fileId && event.file.content) receive(event.file);
+    if (event.fileId === fileId && filePanel === 'contributions') {
+      fileApi.contributions(token, roomId, fileId).then(setContributionMap).catch(() => {});
+    }
   });
   const read = (key, fallback) => drafts[key]?.value ?? fallback;
   const save = useCallback(
@@ -1182,11 +1186,25 @@ export function FileEditor({ token, userId }) {
     } finally { setPanelBusy(false); }
   };
   const assignArea = async (areaId, assigneeId) => {
-    setPanelBusy(true); setPanelError('');
+    setUpdatingArea(areaId); setPanelError('');
     try { setContributionMap(await fileApi.assign(token, roomId, fileId, areaId, assigneeId || null)); }
     catch (failure) { setPanelError(failure.message); }
-    finally { setPanelBusy(false); }
+    finally { setUpdatingArea(''); }
   };
+  const setAreaStatus = async (areaId, status) => {
+    setUpdatingArea(areaId); setPanelError('');
+    try { setContributionMap(await fileApi.setAreaStatus(token, roomId, fileId, areaId, status)); }
+    catch (failure) { setPanelError(failure.message); }
+    finally { setUpdatingArea(''); }
+  };
+  const areas = contributionMap?.areas || [];
+  const completedAreas = areas.filter((area) => area.status === 'done').length;
+  const assignedAreas = areas.filter((area) => area.assigneeId).length;
+  const owners = (contributionMap?.members || []).map((member) => ({
+    ...member,
+    areas: areas.filter((area) => area.assigneeId === member.id).length,
+    done: areas.filter((area) => area.assigneeId === member.id && area.status === 'done').length,
+  })).filter((member) => member.areas > 0);
   if (error && !file)
     return (
       <main className="wf-page">
@@ -1246,7 +1264,23 @@ export function FileEditor({ token, userId }) {
         {panelError && <p className="wf-error" role="alert">{panelError}</p>}
         {panelBusy && <p className="wf-panel-loading" role="status">Loading…</p>}
         {filePanel === 'history' && !panelBusy && (previewVersion ? <div className="wf-version-preview"><button className="wf-history-back" type="button" onClick={() => setPreviewVersion(null)}><ArrowLeft size={14} /> All versions</button><div className="wf-version-meta"><strong>Version {previewVersion.revision}{previewVersion.kind === 'restore' ? ' · Restored' : ''}</strong><span>{previewVersion.authorName || 'A teammate'} · {new Date(previewVersion.createdAt).toLocaleString()}</span></div><pre>{versionPreviewText(file.type, previewVersion)}</pre>{roomOwnerId === userId && <button className="wf-share wf-restore-action" type="button" onClick={restoreFileVersion} disabled={panelBusy}><RefreshCw size={15} /> Restore this version</button>}</div> : <div className="wf-history-list">{fileHistory.map((item) => <button className="wf-history-row" type="button" key={item.revision} onClick={() => previewFileVersion(item)}><span className="wf-history-icon">{item.kind === 'restore' ? <RefreshCw size={15} /> : <FileClock size={15} />}</span><span><strong>Version {item.revision}{item.revision === file.revision ? <small> CURRENT</small> : ''}</strong><em>{item.authorName} · {new Date(item.createdAt).toLocaleString()}</em></span><ArrowRight size={15} /></button>)}{!fileHistory.length && <p className="wf-panel-loading">No saved versions yet.</p>}</div>)}
-        {filePanel === 'contributions' && contributionMap && !panelBusy && <div className="wf-contribution-list"><div className="wf-contribution-summary"><span><strong>{contributionMap.areas.filter((area) => area.assigneeId).length}</strong> of {contributionMap.areas.length} areas assigned</span><span><strong>{contributionMap.contributors.reduce((sum, person) => sum + person.edits, 0)}</strong> saved edits tracked</span></div>{contributionMap.areas.map((area) => <article className="wf-contribution-row" key={area.id}><div className="wf-contribution-area"><strong>{area.label}</strong><span>{area.edits} saved {area.edits === 1 ? 'edit' : 'edits'}{area.contributors.length ? ` · ${area.contributors.map((person) => `${person.name} ${person.edits}`).join(', ')}` : ' · No edits yet'}</span></div><label><span className="sr-only">Owner for {area.label}</span><select value={area.assigneeId || ''} onChange={(event) => assignArea(area.id, event.target.value)} disabled={panelBusy}><option value="">Unassigned</option>{contributionMap.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select>{area.assigneeId && <Check size={15} aria-hidden="true" />}</label></article>)}{!contributionMap.areas.length && <p className="wf-panel-loading">Add a slide or page to map its ownership.</p>}<p className="wf-contribution-note">Saved edit counts show activity, not quality or effort.</p></div>}
+        {filePanel === 'contributions' && contributionMap && !panelBusy && <div className="wf-contribution-list">
+          <div className="wf-contribution-overview">
+            <div className="wf-contribution-overview-head"><span>WORK COVERAGE</span><strong>{completedAreas} <small>/ {areas.length} areas done</small></strong></div>
+            <progress className="wf-contribution-progress" value={completedAreas} max={Math.max(areas.length, 1)} aria-label={`${completedAreas} of ${areas.length} work areas marked done`} />
+            <div className="wf-contribution-summary"><span><strong>{assignedAreas}</strong> of {areas.length} areas owned</span><span><strong>{contributionMap.contributors.reduce((sum, person) => sum + person.edits, 0)}</strong> saved edits tracked</span></div>
+            {owners.length > 0 && <div className="wf-contribution-workload" aria-label="Work ownership by teammate"><span>OWNERSHIP</span>{owners.map((owner) => <span className="wf-owner-chip" key={owner.id}><strong>{owner.name}</strong><small>{owner.done}/{owner.areas} done</small></span>)}</div>}
+          </div>
+          {areas.map((area) => <article className="wf-contribution-row" key={area.id}>
+            <div className="wf-contribution-area"><strong>{area.label}</strong><span>{area.edits} saved {area.edits === 1 ? 'edit' : 'edits'}{area.contributors.length ? ` · ${area.contributors.map((person) => `${person.name} ${person.edits}`).join(', ')}` : ' · No edits yet'}</span></div>
+            <div className="wf-contribution-controls">
+              <label><span className="sr-only">Owner for {area.label}</span><select value={area.assigneeId || ''} onChange={(event) => assignArea(area.id, event.target.value)} disabled={updatingArea === area.id}><option value="">Unassigned</option>{contributionMap.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></label>
+              <label><span className="sr-only">Progress for {area.label}</span><select className={`wf-area-status is-${area.status}`} value={area.status} onChange={(event) => setAreaStatus(area.id, event.target.value)} disabled={updatingArea === area.id}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label>
+            </div>
+          </article>)}
+          {!areas.length && <p className="wf-panel-loading">Add a slide or page to map its ownership.</p>}
+          <p className="wf-contribution-note">Progress is set by teammates. Saved edit counts show activity, not quality or effort.</p>
+        </div>}
       </section>}
       {error && (
         <p className="wf-error" role="alert">

@@ -52,10 +52,11 @@ History items: `{revision,authorId,authorName,kind,createdAt,restoredFromRevisio
 | GET `/rooms/:roomId/files/:fileId/history/:revision` | None | 200, `{version}` including file content; room member |
 | POST `/rooms/:roomId/files/:fileId/history/:revision/restore` | `{operationId,expectedRevision}` | 200, `{file}`; room owner only |
 | POST `/rooms/:roomId/files/:fileId/run` | `{language,source,stdin}` | 200, compiler status and bounded output; authenticated room member, code files only; five runs per user/minute |
-| GET `/rooms/:roomId/files/:fileId/contributions` | None | 200, current areas, member list, and saved edit counts; room member |
+| GET `/rooms/:roomId/files/:fileId/contributions` | None | 200, current areas, member list, saved edit counts, owner, and `todo`/`in_progress`/`done` status; room member |
 | POST `/rooms/:roomId/files/:fileId/assignments` | `{areaId,assigneeId}` (`assigneeId:null` clears) | 200, updated contribution map; room member |
+| POST `/rooms/:roomId/files/:fileId/areas/:areaId/status` | `{status}` (`todo`, `in_progress`, or `done`) | 200, updated contribution map; room member |
 
-File versions snapshot document, slide, spreadsheet, notebook, or code state per committed revision. Restores are append-only and preserve the selected snapshot as a new revision. The contribution map supports one document, spreadsheet, or code area and per-slide/per-notebook-page ownership; saved edits are derived from the server operation log. File history opened on an older file with no snapshot backfills only its current state, since earlier snapshots cannot be reconstructed retroactively. Code workspaces keep separate Python and C++ sources and use the authenticated backend's isolated runner; see [Code workspaces](code-workspaces.md).
+File versions snapshot document, slide, spreadsheet, notebook, or code state per committed revision. Restores are append-only and preserve the selected snapshot as a new revision. The contribution map supports one document, spreadsheet, or code area and per-slide/per-notebook-page ownership and progress; saved edits are derived from the server operation log. Changes to area ownership or progress are sent to joined room members. File history opened on an older file with no snapshot backfills only its current state, since earlier snapshots cannot be reconstructed retroactively. Code workspaces keep separate Python and C++ sources and use the authenticated backend's isolated runner; see [Code workspaces](code-workspaces.md).
 
 ## Errors
 

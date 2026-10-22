@@ -245,8 +245,9 @@ export function demoFileContributions(roomId, fileId) {
   const areas = file.type === 'slides' ? (file.content.slides || []).map((slide) => ({ id: `slide:${slide.id}`, label: slide.title || 'Untitled slide' })) : file.type === 'notebook' ? (file.content.pages || []).map((page) => ({ id: `page:${page.id}`, label: page.title || 'Untitled page' })) : [{ id: file.type === 'document' ? 'document' : file.type === 'code' ? 'code' : 'spreadsheet', label: file.type === 'document' ? 'Document' : file.type === 'code' ? 'Code' : 'Spreadsheet' }];
   const snapshots = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}')[fileId] || [];
   const assignments = JSON.parse(localStorage.getItem('synkro.demo.file-assignments.v1') || '{}')[fileId] || {};
+  const statuses = JSON.parse(localStorage.getItem('synkro.demo.file-area-status.v1') || '{}')[fileId] || {};
   const editCount = snapshots.filter((row) => row.kind !== 'initial').length;
-  const areasWithEdits = areas.map((area) => ({ ...area, assigneeId: assignments[area.id] || null, edits: editCount, contributors: editCount ? [{ id: DEMO_USER.id, name: DEMO_USER.name, edits: editCount }] : [] }));
+  const areasWithEdits = areas.map((area) => ({ ...area, assigneeId: assignments[area.id] || null, status: statuses[area.id] || 'todo', edits: editCount, contributors: editCount ? [{ id: DEMO_USER.id, name: DEMO_USER.name, edits: editCount }] : [] }));
   return { members: [{ id: DEMO_USER.id, name: DEMO_USER.name }], areas: areasWithEdits, contributors: [{ id: DEMO_USER.id, name: DEMO_USER.name, edits: snapshots.filter((row) => row.kind !== 'initial').length }] };
 }
 
@@ -259,5 +260,17 @@ export function demoFileAssign(roomId, fileId, areaId, assigneeId) {
   assignments[fileId][areaId] = assigneeId;
   localStorage.setItem('synkro.demo.file-assignments.v1', JSON.stringify(assignments));
   data.areas = data.areas.map((area) => ({ ...area, assigneeId: assignments[fileId][area.id] || null }));
+  return data;
+}
+
+export function demoFileSetAreaStatus(roomId, fileId, areaId, status) {
+  const data = demoFileContributions(roomId, fileId);
+  if (!data.areas.some((area) => area.id === areaId)) throw new Error('Work area no longer exists.');
+  if (!['todo', 'in_progress', 'done'].includes(status)) throw new Error('Choose To do, In progress, or Done.');
+  const statuses = JSON.parse(localStorage.getItem('synkro.demo.file-area-status.v1') || '{}');
+  statuses[fileId] ||= {};
+  statuses[fileId][areaId] = status;
+  localStorage.setItem('synkro.demo.file-area-status.v1', JSON.stringify(statuses));
+  data.areas = data.areas.map((area) => ({ ...area, status: statuses[fileId][area.id] || 'todo' }));
   return data;
 }

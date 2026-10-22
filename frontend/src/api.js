@@ -4,7 +4,7 @@ import {
   demoCreateRoom, demoInvite, demoJoinRoom, demoNote, demoRestore, demoRoom, demoRooms, demoVersions,
 } from './demo.js';
 import { IS_ANDROID } from './native-session.js';
-import { demoFileAssign, demoFileContributions, demoFileCreate, demoFileGet, demoFileHistory, demoFileList, demoFileListMine, demoFileRestore, demoFileUpdate, demoFileVersion } from './file-demo.js';
+import { demoFileAssign, demoFileContributions, demoFileCreate, demoFileGet, demoFileHistory, demoFileList, demoFileListMine, demoFileRestore, demoFileSetAreaStatus, demoFileUpdate, demoFileVersion } from './file-demo.js';
 
 export class ApiError extends Error {
   constructor(message, code, status) {
@@ -129,6 +129,7 @@ export const fileApi = {
   restore: (token, roomId, fileId, revision, operationId, expectedRevision) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileRestore(roomId, fileId, revision, operationId, expectedRevision)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/history/${revision}/restore`, { token, method: 'POST', body: JSON.stringify({ operationId, expectedRevision }) }),
   contributions: (token, roomId, fileId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileContributions(roomId, fileId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/contributions`, { token }),
   assign: (token, roomId, fileId, areaId, assigneeId) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileAssign(roomId, fileId, areaId, assigneeId)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/assignments`, { token, method: 'POST', body: JSON.stringify({ areaId, assigneeId }) }),
+  setAreaStatus: (token, roomId, fileId, areaId, status) => DEMO_MODE && token === DEMO_TOKEN ? Promise.resolve(demoFileSetAreaStatus(roomId, fileId, areaId, status)) : request(`/rooms/${encodeURIComponent(roomId)}/files/${encodeURIComponent(fileId)}/areas/${encodeURIComponent(areaId)}/status`, { token, method: 'POST', body: JSON.stringify({ status }) }),
 };
 
 export const compilerApi = {

@@ -15,7 +15,7 @@ Use MongoDB Atlas with separate collections. API IDs are strings; validate and c
 | `files` | `_id`, `roomId`, `type`, `title`, `content`, `revision`, `fieldRevisions`, `createdBy`, `updatedBy`, `createdAt`, `updatedAt` |
 | `fileVersions` | `_id`, `fileId`, `roomId`, `revision`, `title`, `content`, `authorId`, `operationId`, `kind`, `restoredFromRevision` nullable, `createdAt` |
 | `fileOperations` | `fileId`, `roomId`, `operationId`, `authorId`, `requestHash`, `revision`, `patch`, `createdAt` |
-| `fileAssignments` | `fileId`, `roomId`, `areaId`, `assigneeId`, `assignedBy`, `updatedAt` |
+| `fileAssignments` | `fileId`, `roomId`, `areaId`, nullable `assigneeId`, `assignedBy`, `status`, `statusUpdatedBy`, `updatedAt` |
 
 `kind` is `initial`, `edit`, or `restore`. Revision 0 is the empty initial version with a server-generated operation ID. `requestHash` hashes a canonical representation of the operation's kind and submitted fields; it detects reuse of an operation ID with different content. For restore, include source revision and expected current revision in that hash.
 
@@ -52,8 +52,8 @@ The room/revision index also supports descending history reads. TTL cleanup is n
 6. Author and owner identities come from the authenticated server context.
 7. Membership is checked against the target room for every read and mutation; knowing a version ID does not grant access.
 8. File history stores a snapshot for every committed file revision. Restore creates a new revision and advances the wildcard field revision so stale drafts cannot silently overwrite the restored file.
-9. File restores are room-owner-only. Assignments can only point to existing areas and members of that room.
-10. Contribution counts are derived from committed file operations; they describe saved activity and are not quality or effort scores.
+9. File restores are room-owner-only. Work-map owners can only be room members, areas must exist in the file, and progress is one of `todo`, `in_progress`, or `done`.
+10. Contribution counts are derived from committed file operations; they describe saved activity and are not quality or effort scores. Work-map status and ownership are explicit team signals, persisted independently from edit activity.
 
 For a normal edit, read current note inside a transaction, increment revision, update note, and insert a version. A concurrent transaction conflict restarts the read/write attempt. For restore, verify the expected revision inside the transaction; on mismatch return `REVISION_CONFLICT` without modifying anything. Check committed operation identity before a restore's expected-revision check so a retry succeeds even after later edits.
 

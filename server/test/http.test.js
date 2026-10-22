@@ -19,6 +19,7 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
     restore: async (_token, roomId, fileId, revision, payload) => ({ file: { roomId, fileId, revision, ...payload } }),
     contributions: async (_userId, roomId, fileId) => ({ areas: [{ roomId, fileId }] }),
     assign: async (_token, roomId, fileId, payload) => ({ areas: [{ roomId, fileId, ...payload }] }),
+    updateAreaStatus: async (_token, roomId, fileId, areaId, payload) => ({ areas: [{ roomId, fileId, areaId, ...payload }] }),
   };
   const codeRunner = { run: async (payload) => ({ status: 'Accepted', stdout: `${payload.language} output`, stderr: '', compileOutput: '', time: '0.001', memory: 1000 }) };
   let runFileType = 'code';
@@ -61,6 +62,8 @@ test('HTTP pipeline enforces origins, auth, readiness, and bounded JSON', async 
   assert.equal(wrongFileType.response.status, 422);
   const assignedArea = await fetchJson('/api/v1/rooms/room/files/file/assignments', { method: 'POST', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ areaId: 'document', assigneeId: null }) });
   assert.equal(assignedArea.body.data.areas[0].areaId, 'document');
+  const areaStatus = await fetchJson('/api/v1/rooms/room/files/file/areas/document/status', { method: 'POST', headers: { Authorization: 'Bearer test', Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'done' }) });
+  assert.equal(areaStatus.body.data.areas[0].status, 'done');
   const google = await fetchJson('/api/v1/auth/google', { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: 'test' }) });
   assert.equal(google.response.status, 200);
   assert.equal(google.body.data.token, 'test');

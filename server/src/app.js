@@ -131,6 +131,10 @@ export function createApp(config, { db, auth, rooms, notes, files, codeRunner, l
   }));
   app.post('/api/v1/rooms/:roomId/files/:fileId/assignments', route((request) =>
     files.assign(request.token, request.params.roomId, request.params.fileId, request.body)));
+  app.post('/api/v1/rooms/:roomId/files/:fileId/areas/:areaId/status', route((request) => {
+    limiter.check(`file-area-status:${request.actor.user._id}:${request.params.roomId}`, 60, 60 * 1000);
+    return files.updateAreaStatus(request.token, request.params.roomId, request.params.fileId, request.params.areaId, request.body);
+  }));
   app.get('/api/v1/rooms/:roomId/invite', route((request) => rooms.invite(request.actor.user._id, request.params.roomId)));
   app.post('/api/v1/rooms/:roomId/invite/rotate', route((request) => {
     limiter.check(`invite:${request.actor.user._id}`, 10, 60 * 1000);
