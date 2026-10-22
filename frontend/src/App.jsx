@@ -5,7 +5,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
   Activity, ArrowDown, CircleHelp, Clock3, Copy, Database, FileClock, FilePlus2, FileText, Fingerprint, GitBranch, Globe2,
   Eye, EyeOff, History, KeyRound, LayoutGrid, LogOut, Menu, MoreHorizontal,
-  LockKeyhole, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi, Code2,
+  LockKeyhole, MessageCircle, MessageSquare, Monitor, NotebookTabs, PenLine, Plus, Play, Pause, Presentation, Radio, RefreshCw, RotateCcw, Settings2, ShieldCheck, Sparkles, Table2, Users, Wifi, Code2,
   Palette, X, Zap,
 } from 'lucide-react';
 import { authApi, fileApi, roomApi } from './api.js';
@@ -13,6 +13,7 @@ import { validateAuthFields } from './auth-validation.js';
 import { consumeGitHubCallback, createGitHubAuthorizationUrl } from './github-oauth.js';
 import { createWorkspaceSocket, socketAck } from './realtime.js';
 import { DEMO_EMAIL, DEMO_MODE, DEMO_PASSWORD } from './demo.js';
+import { buildWhatsAppShareUrl } from './invite-links.js';
 import { IS_ANDROID, persistNativeSession, restoreNativeSession } from './native-session.js';
 import { DEFAULT_WORKSPACE_THEME, persistWorkspaceTheme, readWorkspaceTheme, WORKSPACE_THEMES } from './workspace-theme.js';
 import FlowStage from './FlowStage.jsx';
@@ -119,11 +120,10 @@ function AuthShell({ children }) {
           <div className="auth-highlight"><span className="highlight-icon"><LockKeyhole size={14} /></span><span><strong>Your ideas stay yours</strong><small>Private rooms for the people you invite.</small></span></div>
         </div>
         <div className="auth-visual" aria-hidden="true">
-          <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
           <div className="visual-card visual-card-back"><span className="mini-label">ROOM / 01</span><div className="visual-lines"><i /><i /><i /></div><span className="visual-check"><Check size={13} /></span></div>
           <div className="visual-card visual-card-front"><div className="visual-card-head"><span className="live-pill"><i /> LIVE SESSION</span><MoreHorizontal size={16} /></div><div className="visual-note-title">A little more in sync.</div><div className="visual-lines"><i /><i /><i /><i /></div><div className="visual-collaborators"><span className="avatar avatar-olive">A</span><span className="avatar avatar-lime">P</span><span className="avatar avatar-violet">T</span><small>your team is here</small></div></div>
-          <div className="visual-spark visual-spark-one">✳</div><div className="visual-spark visual-spark-two">·</div>
         </div>
+        <div className="auth-features" aria-label="Workspace features"><span><LockKeyhole size={14} />Private rooms</span><span><Radio size={14} />Live presence</span><span><History size={14} />Revision history</span></div>
         <div className="auth-footnote"><Globe2 size={14} /> Made for teams that think out loud.</div>
       </section>
       <section className="auth-form-wrap">{children}</section>
@@ -235,6 +235,7 @@ function AuthPage({ register = false }) {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
   const submitLock = useRef(false);
+  const location = useLocation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -242,7 +243,7 @@ function AuthPage({ register = false }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
-  if (session) return <Navigate to="/dashboard" replace />;
+  if (session) return <Navigate to={location.state?.from || '/dashboard'} replace />;
 
   const signInWithGoogle = async (credential) => {
     if (submitLock.current) return;
@@ -293,7 +294,7 @@ function AuthPage({ register = false }) {
     try {
       const result = register ? await authApi.register({ name: name.trim(), email: email.trim(), password }) : await authApi.login({ email: email.trim(), password });
       setSession({ user: result.user, token: result.token, expiresAt: result.expiresAt });
-      navigate('/dashboard', { replace: true });
+      navigate(location.state?.from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'We could not complete your request. Please try again.');
     } finally {
@@ -307,7 +308,6 @@ function AuthPage({ register = false }) {
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
     setError('');
   };
-
   return <AuthShell>
     <div className="auth-card glass-panel">
       <div className="card-kicker"><span className="kicker-icon"><Fingerprint size={15} /></span> YOUR WORKSPACE, YOUR PEOPLE</div>
@@ -323,10 +323,9 @@ function AuthPage({ register = false }) {
         <button className="button button-primary auth-submit" disabled={busy}>{busy ? <ButtonLoader label={register ? 'Creating your account…' : 'Signing you in…'} /> : <>{register ? 'Create your account' : 'Sign In'} <ArrowRight size={16} /></>}</button>
       </form>
       {!register && DEMO_MODE && <div className="demo-access"><div><span className="demo-access-tag">LOCAL DEMO</span><span>Preview without a backend</span></div><div className="demo-credentials"><code>{DEMO_EMAIL}</code><code>{DEMO_PASSWORD}</code></div><button type="button" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setFieldErrors({}); setError(''); }}>Fill demo sign-in <ArrowDown size={13} /></button><small>Demo data stays in this browser. No server connection is used.</small></div>}
-      <div className="auth-switch">{register ? 'Already have an account?' : "Don't have an account?"} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Sign up'} <ArrowUpRight size={13} /></Link></div>
+      <div className="auth-switch">{register ? 'Already have an account?' : "Don't have an account?"} <Link to={register ? '/login' : '/register'} state={{ from: location.state?.from }}>{register ? 'Sign in' : 'Sign up'} <ArrowUpRight size={13} /></Link></div>
       <div className="auth-secure"><ShieldCheck size={14} /> Your notes belong to your team. Sign in again after a page reload.</div>
     </div>
-    <div className="form-below"><span>Private rooms</span><i /><span>Live presence</span><i /><span>Revision history</span></div>
   </AuthShell>;
 }
 
@@ -878,6 +877,49 @@ function Modal({ title, subtitle, children, onClose }) {
   return <div className="modal-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Close dialog"><X size={18} /></button><div className="section-kicker">A SPACE FOR YOUR TEAM</div><h2 id="modal-title">{title}</h2><p>{subtitle}</p>{children}</section></div>;
 }
 
+function InviteJoinRoute() {
+  const { session } = useSession();
+  const location = useLocation();
+  return session
+    ? <AppFrame><InviteJoinPage /></AppFrame>
+    : <Navigate to="/login" replace state={{ from: location }} />;
+}
+
+function InviteJoinPage() {
+  const { inviteCode = '' } = useParams();
+  const { session } = useSession();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const join = async (event) => {
+    event.preventDefault();
+    if (!inviteCode || busy) return;
+    setBusy(true); setError('');
+    try {
+      const result = await roomApi.join(session.token, inviteCode);
+      const room = result.room || result;
+      navigate(`/rooms/${room.id}`, { replace: true });
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  return <section className="invite-join-page">
+    <form className="invite-join-card glass-panel" onSubmit={join}>
+      <div className="section-kicker">ROOM INVITATION</div>
+      <h1>Join this workspace</h1>
+      <p>A teammate invited you to collaborate in Synkro. Confirm to join with this invite code.</p>
+      <div className="invite-join-code"><code>{inviteCode}</code></div>
+      {error && <div className="form-error" role="alert">{error}</div>}
+      <div className="modal-actions">
+        <GlassButton type="button" onClick={() => navigate('/dashboard')}>Not now</GlassButton>
+        <GlassButton variant="primary" disabled={!inviteCode || busy} aria-busy={busy}>
+          {busy ? <><span className="spinner" /> Joining…</> : <>Join workspace <ArrowRight size={15} /></>}
+        </GlassButton>
+      </div>
+    </form>
+  </section>;
+}
+
 function RoomPage() {
   const { roomId } = useParams();
   const { session, setSession } = useSession();
@@ -1173,6 +1215,15 @@ function RoomPage() {
     finally { setInviteBusy(false); }
   };
   const copyInvite = async () => { try { await navigator.clipboard.writeText(inviteCode); setToast('Invite code copied.'); } catch { setToast('Copy is unavailable. Select and copy the code.'); } };
+  const shareViaWhatsApp = () => {
+    if (!inviteCode) return;
+    const whatsAppUrl = buildWhatsAppShareUrl(window.location.origin, inviteCode);
+    if (typeof window.open !== 'function') { window.location.assign(whatsAppUrl); return; }
+    try {
+      const popup = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer');
+      if (!popup) window.location.assign(whatsAppUrl);
+    } catch { window.location.assign(whatsAppUrl); }
+  };
   const handleEdit = (event) => {
     const nextValue = event.target.value;
     if (new TextEncoder().encode(nextValue).length > 5 * 1024 * 1024) { setToast('Notes can be up to 5 MiB.'); return; }
@@ -1277,6 +1328,7 @@ function RoomPage() {
       <div className="invite-code-box">{inviteCode ? <span>{inviteCode}</span> : <InlineLoader label="Loading invite…" />}<button className="icon-button" onClick={copyInvite} disabled={!inviteCode} aria-label="Copy invite code"><Copy size={16} /></button></div>
       <div className="invite-note"><ShieldCheck size={14} /> Rotating a code prevents new people from using the old one.</div>
       {drawerError && <div className="form-error" role="alert">{drawerError}</div>}
+      <GlassButton type="button" className="whatsapp-share" onClick={shareViaWhatsApp} disabled={!inviteCode} aria-label="Share this workspace invitation via WhatsApp"><MessageCircle size={16} aria-hidden="true" /> Share via WhatsApp</GlassButton>
   <div className="modal-actions"><GlassButton type="button" onClick={() => setInviteOpen(false)}>Done</GlassButton><GlassButton variant="primary" onClick={rotateInvite} disabled={inviteBusy || !inviteCode}>{inviteBusy ? <ButtonLoader label="Rotating code…" /> : <><RefreshCw size={14} /> Rotate code</>}</GlassButton></div>
     </Modal>}
     {toast && <div className="toast glass-panel" role="status"><Check size={15} /> {toast}<button className="toast-close" onClick={() => setToast('')} aria-label="Dismiss"><X size={14} /></button></div>}
@@ -1775,6 +1827,7 @@ export default function App() {
     <Route path="/register" element={<AuthPage register />} />
     <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
     <Route path="/dashboard" element={<Protected><AppFrame><Dashboard /></AppFrame></Protected>} />
+    <Route path="/join/:inviteCode" element={<InviteJoinRoute />} />
     <Route path="/rooms/:roomId" element={<Protected><AppFrame><RoomPage /></AppFrame></Protected>} />
     <Route path="/studio" element={<Protected><AppFrame><StudioHomeRoute /></AppFrame></Protected>} />
     <Route path="/studio/:roomId/:fileId" element={<Protected><AppFrame><FileEditorRoute /></AppFrame></Protected>} />
