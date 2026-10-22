@@ -21,17 +21,20 @@ test('header and tabs remain outside the only scrollable tab content region', ()
   assert.match(component, /<header className="wa-header">[\s\S]*?<div className="wa-tabs"[\s\S]*?className="wa-view wa-insights"[\s\S]*?className="wa-view wa-chat"/);
 });
 
-test('chat introduction and suggestions precede the scroll cue and composer', () => {
+test('chat content scrolls independently above the docked composer', () => {
   const intro = component.indexOf('className="wa-chat-welcome"');
   const suggestions = component.indexOf('className="wa-examples"');
-  const cue = component.indexOf('className="wa-scroll-cue"');
   const composer = component.indexOf('className="wa-composer"');
-  assert.ok(intro >= 0 && suggestions > intro && cue > suggestions && composer > cue);
-  assert.match(css, /\.wa-scroll-cue\s*\{[^}]*min-height:\s*max\(360px,\s*52vh\)/s);
-  assert.match(component, /Scroll down to ask your question/);
+  assert.ok(intro >= 0 && suggestions > intro && composer > suggestions);
+  assert.match(css, /\.wa-chat\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column/s);
+  assert.match(css, /\.wa-chat-content\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1\s+1\s+auto;[^}]*overflow-y:\s*auto/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*flex:\s*0\s+0\s+auto/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*z-index:\s*2/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*#101412/s);
+  assert.doesNotMatch(component, /wa-scroll-cue|Scroll down to ask your question/);
 });
 
-test('chat composer is reachable in the tab scroller and protected from the mobile safe area', () => {
+test('chat composer is outside the scrolling content and protected from the mobile safe area', () => {
   const chatStart = component.indexOf('className="wa-view wa-chat"');
   const chatEnd = component.indexOf('</section>', chatStart);
   const chatMarkup = component.slice(chatStart, chatEnd);
@@ -39,10 +42,11 @@ test('chat composer is reachable in the tab scroller and protected from the mobi
   assert.ok(chatMarkup.includes('htmlFor="wa-question"'));
   assert.ok(chatMarkup.includes('maxLength={QUESTION_LIMIT}'));
   assert.ok(chatMarkup.includes('aria-label="Send question"'));
-  assert.match(css, /\.wa-composer\s*\{[^}]*scroll-margin-block-end:\s*24px/s);
-  assert.match(css, /\.wa-view\s*\{[^}]*padding-bottom:\s*calc\(24px \+ env\(safe-area-inset-bottom\)\)/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*padding:[^;]*env\(safe-area-inset-bottom\)/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*#101412/s);
   assert.doesNotMatch(css, /\.wa-composer\s*\{[^}]*position:\s*fixed/s);
   assert.match(css, /\.wa-composer textarea\s*\{[^}]*font-size:\s*16px/);
+  assert.match(css, /\.wa-composer textarea\s*\{[^}]*height:\s*clamp\(56px,\s*12dvh,\s*88px\)/);
 });
 
 test('assistant body text and controls use readable sizes and visible focus treatment', () => {
