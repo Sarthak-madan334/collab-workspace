@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { Braces, Check, ChevronDown, CircleAlert, Clock3, Play, Terminal } from 'lucide-react';
 import { compilerApi } from './api.js';
 
@@ -36,13 +36,18 @@ export function CodeEditor({ file, token, roomId, fileId, read, edit, perform })
   const language = file.content.language === 'cpp' ? 'cpp' : 'python';
   const key = `code:source:${language}`;
   const source = read(key, file.content.sources?.[language] || '');
+  const renderSource = useDeferredValue(source);
   const stdin = read('code:stdin', file.content.stdin || '');
   const [result, setResult] = useState(null);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState('');
   const codeArea = useRef(null);
-  const lines = useMemo(() => Array.from({ length: Math.max(1, source.split('\n').length) }, (_, i) => i + 1), [source]);
-  const highlighted = useMemo(() => highlightCode(source, language), [source, language]);
+  const lines = useMemo(() => Array.from({ length: Math.max(1, renderSource.split('\n').length) }, (_, i) => i + 1), [renderSource]);
+  const highlighted = useMemo(() => highlightCode(renderSource, language), [renderSource, language]);
+  const lineNumbers = useMemo(() => lines.map((line) => <span key={line}>{line}</span>), [lines]);
+  const highlightedMarkup = useMemo(() => highlighted.map((piece, index) => piece.kind
+    ? <span className={`ce-token-${piece.kind}`} key={index}>{piece.text}</span>
+    : <span key={index}>{piece.text}</span>), [highlighted]);
 
   const changeLanguage = (next) => {
     if (next !== language) {
@@ -112,9 +117,9 @@ export function CodeEditor({ file, token, roomId, fileId, read, edit, perform })
         <section className="ce-pane ce-source-pane" aria-label="Source code">
           <div className="ce-pane-heading"><span><Braces size={14} /> {language === 'python' ? 'main.py' : 'main.cpp'}</span><span>Autosaves to this shared file</span></div>
           <div className="ce-editor">
-            <div className="ce-gutter" aria-hidden="true">{lines.map((line) => <span key={line}>{line}</span>)}</div>
+            <div className="ce-gutter" aria-hidden="true">{lineNumbers}</div>
             <div className="ce-code-surface">
-              <pre className="ce-code-highlight" aria-hidden="true">{highlighted.map((piece, index) => piece.kind ? <span className={`ce-token-${piece.kind}`} key={index}>{piece.text}</span> : <span key={index}>{piece.text}</span>)}</pre>
+              <pre className="ce-code-highlight" aria-hidden="true">{highlightedMarkup}</pre>
               <textarea
                 ref={codeArea}
                 value={source}
@@ -147,7 +152,7 @@ export function CodeEditor({ file, token, roomId, fileId, read, edit, perform })
             maxLength={16 * 1024}
             rows={2}
           />
-          <div className="ce-editor-footer"><span>{source.split('\n').length} lines</span><span>Ctrl/Cmd + Enter to run</span></div>
+          <div className="ce-editor-footer"><span>{lines.length} lines</span><span>Ctrl/Cmd + Enter to run</span></div>
         </section>
 
         <section className="ce-pane ce-output-pane" aria-label="Program output">

@@ -1044,9 +1044,14 @@ function RoomPage() {
   const onAssistantOpenChange = useContext(AssistantOpenContext);
   const navigate = useNavigate();
   const socketRef = useRef(null);
+  const activeSocketRoomRef = useRef(null);
   const draftRef = useRef('');
   const noteRef = useRef(null);
   const inFlightRef = useRef(null);
+  const lastNoteSubmitAtRef = useRef(0);
+  const noteThrottleTimerRef = useRef(null);
+  const submitSnapshotRef = useRef(null);
+  const conflictRef = useRef(null);
   const presenceSequenceRef = useRef(0);
   const debounceRef = useRef(null);
   const [room, setRoom] = useState(null);
@@ -1082,6 +1087,7 @@ function RoomPage() {
   const dirty = draft !== (note?.content ?? '');
   draftRef.current = draft;
   noteRef.current = note;
+  conflictRef.current = conflict;
 
   const refreshRoomFiles = useCallback(async () => {
     try {
@@ -1162,18 +1168,20 @@ function RoomPage() {
       try {
         const snapshot = await socketAck(socket, 'room:join', { roomId });
         if (!joined) return;
+        activeSocketRoomRef.current = roomId;
         if (snapshot.note) receiveCanonical(snapshot.note);
         setPresence(snapshot.presence || []);
         presenceSequenceRef.current = Number(snapshot.presenceSequence || 0);
         setPresenceSequence(presenceSequenceRef.current);
         setConnection('live');
+        if (draftRef.current !== (noteRef.current?.content ?? '')) setSaveState('pending');
       } catch (error) {
-        joined = false; setConnection('reconnecting');
+        joined = false; activeSocketRoomRef.current = null; setConnection('reconnecting');
         retryJoinTimer = window.setTimeout(joinRoom, 2500);
       }
     };
     const onConnect = () => { setConnection('connecting'); joinRoom(); };
-    const onDisconnect = () => { joined = false; setConnection('reconnecting'); setSaveState((state) => state === 'saving' || state === 'saved' ? 'paused' : state); };
+    const onDisconnect = () => { joined = false; activeSocketRoomRef.current = null; setConnection('reconnecting'); setSaveState((state) => state === 'saving' || state === 'saved' ? 'paused' : state); };
     const onConnectError = (error) => {
       if (error?.message === 'UNAUTHENTICATED') {
         setConnection('error'); setSession(null); navigate('/login', { replace: true });
@@ -1197,6 +1205,7 @@ function RoomPage() {
     socket.connect();
     return () => {
       joined = false;
+      if (activeSocketRoomRef.current === roomId) activeSocketRoomRef.current = null;
       window.clearTimeout(retryJoinTimer);
       socket.off('connect', onConnect); socket.off('disconnect', onDisconnect); socket.off('connect_error', onConnectError);
       socket.off('note:updated', onUpdated); socket.off('presence:updated', onPresence); socket.off('file:created', onFileChanged); socket.off('file:updated', onFileChanged); socket.off('room:deleted', onRoomDeleted); socket.off('session:expired', onExpired);
@@ -1210,7 +1219,24 @@ function RoomPage() {
   const submitSnapshot = useCallback(async (content, baseRevision = Number(note?.revision || 0), operationId = id()) => {
     const socket = socketRef.current;
     if (!socket?.connected) { setSaveState('paused'); return false; }
+    if (activeSocketRoomRef.current !== roomId) { setSaveState('pending'); return false; }
     if (inFlightRef.current) return false;
+    const now = Date.now();
+    const wait = Math.max(0, 200 - (now - lastNoteSubmitAtRef.current));
+    if (wait > 0) {
+      setSaveState('pending');
+      if (noteThrottleTimerRef.current === null) {
+        noteThrottleTimerRef.current = window.setTimeout(() => {
+          noteThrottleTimerRef.current = null;
+          const latest = draftRef.current;
+          if (!conflictRef.current && latest !== (noteRef.current?.content ?? '')) {
+            submitSnapshotRef.current?.(latest, Number(noteRef.current?.revision || 0));
+          }
+        }, wait);
+      }
+      return false;
+    }
+    lastNoteSubmitAtRef.current = now;
     inFlightRef.current = { content, operationId, baseRevision };
     setSaveState('saving');
     try {
@@ -1227,6 +1253,17 @@ function RoomPage() {
       return false;
     }
   }, [note?.revision, receiveCanonical, roomId]);
+  submitSnapshotRef.current = submitSnapshot;
+
+  useEffect(() => {
+    lastNoteSubmitAtRef.current = 0;
+    window.clearTimeout(noteThrottleTimerRef.current);
+    noteThrottleTimerRef.current = null;
+    return () => {
+      window.clearTimeout(noteThrottleTimerRef.current);
+      noteThrottleTimerRef.current = null;
+    };
+  }, [roomId]);
 
   useEffect(() => {
     if (!dirty || conflict || !canEdit) return undefined;
@@ -1234,9 +1271,9 @@ function RoomPage() {
     window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       if (!inFlightRef.current) submitSnapshot(draftRef.current, Number(note?.revision || 0));
-    // The socket accepts up to five edits per second, so 200 ms keeps the
-    // editor responsive without sending updates faster than the server allows.
-    }, 200);
+    // The send throttle preserves the server limit while short typing pauses
+    // are reflected immediately.
+    }, 100);
     return () => window.clearTimeout(debounceRef.current);
   }, [draft, note?.revision, dirty, conflict, canEdit, submitSnapshot]);
 
