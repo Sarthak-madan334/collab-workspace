@@ -1234,7 +1234,9 @@ function RoomPage() {
     window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       if (!inFlightRef.current) submitSnapshot(draftRef.current, Number(note?.revision || 0));
-    }, 500);
+    // The socket accepts up to five edits per second, so 200 ms keeps the
+    // editor responsive without sending updates faster than the server allows.
+    }, 200);
     return () => window.clearTimeout(debounceRef.current);
   }, [draft, note?.revision, dirty, conflict, canEdit, submitSnapshot]);
 

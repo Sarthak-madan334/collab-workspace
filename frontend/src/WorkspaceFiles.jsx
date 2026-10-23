@@ -1138,7 +1138,9 @@ export function FileEditor({ token, userId }) {
     setDrafts((previous) => ({ ...previous, [key]: next }));
     setStatus('Unsaved changes');
     clearTimeout(timerRef.current[key]);
-    timerRef.current[key] = setTimeout(() => save(key), 800);
+    // Persist promptly so collaborators see edits quickly; the server remains
+    // authoritative and still applies its normal revision/conflict checks.
+    timerRef.current[key] = setTimeout(() => save(key), 300);
   };
   const perform = async (patch) => {
     setStatus('Saving…');
