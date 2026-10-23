@@ -6,16 +6,15 @@ const css = readFileSync(new URL('../src/workspace-assistant.css', import.meta.u
 const component = readFileSync(new URL('../src/WorkspaceAssistant.jsx', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
 
-test('assistant panel stays in a right-side drawer across desktop, tablet, and mobile', () => {
-  assert.match(css, /\.wa-panel\s*\{[^}]*width:\s*min\(560px,\s*46vw\)/s);
+test('assistant panel has desktop, tablet, and full-width mobile reading widths', () => {
+  assert.match(css, /\.wa-panel\s*\{[^}]*width:\s*min\(640px,\s*48vw\)/s);
   assert.match(css, /\.wa-panel\s*\{[^}]*height:\s*100dvh;/s);
   assert.match(css, /\.wa-scrim\s*\{[^}]*inset:\s*0;/s);
   assert.match(css, /@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*1100px\)\s*\{[^}]*\.wa-panel\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw\s*-\s*32px\)\)/s);
-  assert.match(css, /@media\s*\(max-width:\s*600px\)\s*\{[^}]*\.wa-scrim\s*\{\s*inset:\s*calc\(8px\s*\+\s*env\(safe-area-inset-top\)\)\s*8px\s*calc\(8px\s*\+\s*env\(safe-area-inset-bottom\)\)/);
-  assert.match(css, /\.wa-panel\s*\{\s*width:\s*min\(88vw,\s*420px\);\s*max-width:\s*100%;[^}]*height:\s*100%/);
+  assert.match(css, /@media\s*\(max-width:\s*600px\)\s*\{[^}]*\.wa-scrim\s*\{\s*inset:\s*0;[^}]*width:\s*100vw/);
+  assert.match(css, /\.wa-panel\s*\{\s*width:\s*100vw;\s*max-width:\s*100vw;[^}]*height:\s*100dvh/);
   assert.match(css, /\.wa-panel\s*\{[^}]*max-width:\s*calc\(100vw\s*-\s*32px\)/s);
   assert.match(css, /\.wa-panel\s*\{[^}]*animation:\s*wa-enter/);
-  assert.match(css, /backdrop-filter:\s*blur\(28px\)\s*saturate\(145%\)/);
 });
 
 test('header and tabs remain outside the only scrollable tab content region', () => {
@@ -37,7 +36,7 @@ test('header and tabs remain outside the only scrollable tab content region', ()
   assert.match(component, /if \(event.key === 'Escape'\) \{[\s\S]*?setPanelOpen\(false\);/);
   assert.match(component, /if \(event.target === event.currentTarget\) setPanelOpen\(false\)/);
   assert.match(component, /panelRef\.current\.querySelectorAll\(/);
-  assert.doesNotMatch(css, /\.app-shell\.assistant-open \.topbar\s*\{[^}]*visibility:\s*hidden/s);
+  assert.match(css, /\.app-shell\.assistant-open \.topbar\s*\{[^}]*visibility:\s*hidden;[^}]*pointer-events:\s*none/s);
   assert.match(component, /document\.body\.style\.overflow = 'hidden'/);
   assert.match(component, /document\.body\.style\.overflow = previousOverflow/);
 });
@@ -52,8 +51,7 @@ test('chat content scrolls independently above the docked composer', () => {
   assert.match(css, /\.wa-chat\s*\{[^}]*overflow:\s*hidden/s);
   assert.match(css, /\.wa-composer-dock\s*\{[^}]*flex:\s*0\s+0\s+auto/s);
   assert.match(css, /\.wa-composer-dock\s*\{[^}]*z-index:\s*2/s);
-  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*rgba\(12,\s*16,\s*14,\s*\.76\)/s);
-  assert.match(css, /\.wa-composer-field\s*\{[^}]*border-radius:\s*17px/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*#101412/s);
   assert.doesNotMatch(component, /wa-scroll-cue|Scroll down to ask your question/);
 });
 
@@ -66,14 +64,11 @@ test('chat composer is outside the scrolling content and protected from the mobi
   assert.ok(chatMarkup.includes('maxLength={QUESTION_LIMIT}'));
   assert.ok(chatMarkup.includes('aria-label="Send question"'));
   assert.match(css, /\.wa-composer-dock\s*\{[^}]*padding:[^;]*env\(safe-area-inset-bottom\)/s);
-  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*rgba\(12,\s*16,\s*14,\s*\.76\)/s);
+  assert.match(css, /\.wa-composer-dock\s*\{[^}]*background:\s*#101412/s);
   assert.doesNotMatch(css, /\.wa-composer\s*\{[^}]*position:\s*fixed/s);
   assert.match(css, /\.wa-composer textarea\s*\{[^}]*font-size:\s*16px/);
-  assert.match(css, /\.wa-composer textarea\s*\{[^}]*height:\s*92px;[^}]*min-height:\s*78px;[^}]*max-height:\s*180px/);
-  assert.match(css, /\.wa-composer textarea\s*\{[^}]*height:\s*78px;[^}]*min-height:\s*68px;[^}]*max-height:\s*140px/);
-  assert.match(chatMarkup, /wa-composer-label-row/);
-  assert.match(chatMarkup, /Shift \+ Enter for a new line/);
-  assert.match(chatMarkup, /wa-composer-field/);
+  assert.match(css, /\.wa-composer textarea\s*\{[^}]*height:\s*80px;[^}]*min-height:\s*72px;[^}]*max-height:\s*96px/);
+  assert.match(css, /\.wa-composer textarea\s*\{[^}]*height:\s*72px;[^}]*min-height:\s*64px;[^}]*max-height:\s*88px/);
 });
 
 test('assistant body text and controls use readable sizes and visible focus treatment', () => {
