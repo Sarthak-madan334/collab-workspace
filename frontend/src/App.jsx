@@ -502,7 +502,7 @@ function AppFrame({ children }) {
   }, [mobileOpen]);
 
   return <div ref={shellRef} className={`app-shell${assistantOpen ? ' assistant-open' : ''}`} data-theme={theme || DEFAULT_WORKSPACE_THEME}>
-    <header ref={topbarRef} className="topbar glass-panel" aria-hidden={assistantOpen} inert={assistantOpen}>
+    <header ref={topbarRef} className="topbar glass-panel">
       <Brand />
       <nav id="workspace-navigation" className={`main-nav ${mobileOpen ? 'nav-open glass-panel' : ''}`} aria-label="Main navigation">
         <Link to="/dashboard" className={`nav-link${location.pathname === '/dashboard' || location.pathname.startsWith('/rooms/') ? ' active' : ''}`} onClick={() => setMobileOpen(false)}><LayoutGrid size={15} /> Rooms</Link>

@@ -141,8 +141,8 @@
   .wa-panel, .wa-spin { animation-duration: .01ms; animation-iteration-count: 1; }
 }
 
-/* Reading-width layout: only the active tab panel scrolls. */
-.wa-scrim { inset: 0; }
+/* A non-blocking drawer: the page remains visible, scrollable, and clickable. */
+.wa-scrim { inset: 88px 12px 12px; pointer-events: none; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .wa-panel {
   --wa-text: #f1f4ed;
   --wa-muted: #c3cbc0;
@@ -151,15 +151,16 @@
   width: min(560px, 46vw);
   max-width: calc(100vw - 32px);
   min-width: 0;
-  height: calc(100dvh - 24px);
-  max-height: calc(100dvh - 24px);
-  margin: 12px;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
   color: var(--wa-text);
   border: 1px solid rgba(230, 245, 235, .22);
   border-radius: 22px;
-  background: linear-gradient(150deg, rgba(25, 33, 29, .91), rgba(11, 15, 14, .88));
+  background: linear-gradient(150deg, rgba(25, 33, 29, .82), rgba(11, 15, 14, .76));
   -webkit-backdrop-filter: blur(28px) saturate(145%);
   backdrop-filter: blur(28px) saturate(145%);
   box-shadow: -28px 12px 80px rgba(0, 0, 0, .48), inset 0 1px 0 rgba(255, 255, 255, .08);
@@ -244,7 +245,7 @@
   .wa-panel { width: min(520px, calc(100vw - 32px)); }
 }
 @media (max-width: 600px) {
-  .wa-scrim { inset: calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); }
+  .wa-scrim { inset: calc(72px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); }
   .wa-panel { width: min(88vw, 420px); max-width: 100%; min-width: 0; height: 100%; max-height: 100%; margin: 0; border-radius: 22px; }
   .wa-header { min-height: 72px; padding: 14px 16px; }
   .wa-tabs { padding: 0 12px; }
