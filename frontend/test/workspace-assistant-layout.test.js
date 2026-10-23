@@ -11,13 +11,11 @@ test('assistant panel stays in a right-side drawer across desktop, tablet, and m
   assert.match(css, /\.wa-panel\s*\{[^}]*height:\s*100dvh;/s);
   assert.match(css, /\.wa-scrim\s*\{[^}]*inset:\s*0;/s);
   assert.match(css, /@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*1100px\)\s*\{[^}]*\.wa-panel\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw\s*-\s*32px\)\)/s);
-  assert.match(css, /@media\s*\(max-width:\s*600px\)\s*\{[^}]*\.wa-scrim\s*\{\s*inset:\s*calc\(72px\s*\+\s*env\(safe-area-inset-top\)\)\s*8px\s*calc\(8px\s*\+\s*env\(safe-area-inset-bottom\)\)/);
+  assert.match(css, /@media\s*\(max-width:\s*600px\)\s*\{[^}]*\.wa-scrim\s*\{\s*inset:\s*calc\(8px\s*\+\s*env\(safe-area-inset-top\)\)\s*8px\s*calc\(8px\s*\+\s*env\(safe-area-inset-bottom\)\)/);
   assert.match(css, /\.wa-panel\s*\{\s*width:\s*min\(88vw,\s*420px\);\s*max-width:\s*100%;[^}]*height:\s*100%/);
   assert.match(css, /\.wa-panel\s*\{[^}]*max-width:\s*calc\(100vw\s*-\s*32px\)/s);
   assert.match(css, /\.wa-panel\s*\{[^}]*animation:\s*wa-enter/);
   assert.match(css, /backdrop-filter:\s*blur\(28px\)\s*saturate\(145%\)/);
-  assert.match(css, /\.wa-scrim\s*\{\s*inset:\s*88px\s+12px\s+12px;\s*pointer-events:\s*none/s);
-  assert.match(css, /\.wa-panel\s*\{[^}]*pointer-events:\s*auto/s);
 });
 
 test('header and tabs remain outside the only scrollable tab content region', () => {
@@ -30,17 +28,18 @@ test('header and tabs remain outside the only scrollable tab content region', ()
   assert.doesNotMatch(css, /\.wa-footer/);
   assert.match(app, /const \[assistantOpen, setAssistantOpen\] = useState\(false\)/);
   assert.match(app, /className=\{`app-shell\$\{assistantOpen \? ' assistant-open' : ''\}`\}/);
-  assert.match(app, /<header ref=\{topbarRef\} className="topbar glass-panel">/);
-  assert.doesNotMatch(app, /aria-hidden=\{assistantOpen\}|inert=\{assistantOpen\}/);
+  assert.match(app, /aria-hidden=\{assistantOpen\} inert=\{assistantOpen\}/);
   assert.match(app, /<WorkspaceAssistant[^>]*onOpenChange=\{onAssistantOpenChange\}/);
   assert.match(component, /onOpenChange\?\.\(nextOpen\)/);
   assert.match(app, /setAssistantOpen\(open\)/);
   assert.match(component, /onClick=\{\(\) => setPanelOpen\(true\)\}/);
   assert.match(component, /onClick=\{\(\) => setPanelOpen\(false\)\}/);
   assert.match(component, /if \(event.key === 'Escape'\) \{[\s\S]*?setPanelOpen\(false\);/);
-  assert.doesNotMatch(component, /aria-modal="true"|panelRef\.current\.querySelectorAll\(/);
+  assert.match(component, /if \(event.target === event.currentTarget\) setPanelOpen\(false\)/);
+  assert.match(component, /panelRef\.current\.querySelectorAll\(/);
   assert.doesNotMatch(css, /\.app-shell\.assistant-open \.topbar\s*\{[^}]*visibility:\s*hidden/s);
-  assert.doesNotMatch(component, /document\.body\.style\.overflow/);
+  assert.match(component, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(component, /document\.body\.style\.overflow = previousOverflow/);
 });
 
 test('chat content scrolls independently above the docked composer', () => {

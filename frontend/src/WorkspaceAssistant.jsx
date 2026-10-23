@@ -27,6 +27,7 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
   const [state, dispatch] = useReducer(assistantReducer, initialAssistantState);
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
+  const panelRef = useRef(null);
   const scrollRef = useRef(null);
   const requestLock = useRef(false);
   const setPanelOpen = useCallback((nextOpen) => {
@@ -44,13 +45,26 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
         event.preventDefault();
         setPanelOpen(false);
       }
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const focusable = [...panelRef.current.querySelectorAll('button:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      if (returnFocus?.isConnected) returnFocus.focus?.();
+      returnFocus?.focus?.();
     };
   }, [open, setPanelOpen]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [open]);
   useEffect(() => {
     if (state.chatStatus === 'loading' || state.chatStatus === 'success') scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [state.messages, state.chatStatus]);
@@ -82,11 +96,11 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
 
   const insights = state.insights;
   return <>
-    <button ref={triggerRef} type="button" className={launcherClassName} onClick={() => setPanelOpen(true)} aria-expanded={open} aria-controls="wa-assistant-panel" disabled={disabled} title={disabled ? 'AI Assistant is unavailable in the local demo. Sign in with a server-backed account to use it.' : undefined}>
+    <button ref={triggerRef} type="button" className={launcherClassName} onClick={() => setPanelOpen(true)} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} title={disabled ? 'AI Assistant is unavailable in the local demo. Sign in with a server-backed account to use it.' : undefined}>
       <Sparkles size={15} /><span>AI Assistant</span>
     </button>
-    {open && <div className="wa-scrim">
-      <aside id="wa-assistant-panel" className="wa-panel" aria-labelledby="wa-title" aria-describedby="wa-description">
+    {open && <div className="wa-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanelOpen(false); }}>
+      <aside ref={panelRef} className="wa-panel" role="dialog" aria-modal="true" aria-labelledby="wa-title" aria-describedby="wa-description">
         <header className="wa-header">
           <div className="wa-heading-icon"><BrainCircuit size={20} aria-hidden="true" /></div>
           <div className="wa-heading-copy"><span className="section-kicker">YOUR WORKSPACE, IN FOCUS</span><h2 id="wa-title">AI Assistant</h2></div>
