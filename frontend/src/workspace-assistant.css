@@ -148,14 +148,21 @@
   --wa-muted: #c3cbc0;
   --wa-subtle: #a9b3a7;
   --wa-line: rgba(226, 236, 222, .17);
-  width: min(640px, 48vw);
+  width: min(560px, 46vw);
   max-width: calc(100vw - 32px);
   min-width: 0;
+  height: calc(100dvh - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: 12px;
   display: flex;
   flex-direction: column;
   color: var(--wa-text);
-  border-color: rgba(226, 236, 222, .2);
-  background: #101412;
+  border: 1px solid rgba(230, 245, 235, .22);
+  border-radius: 22px;
+  background: linear-gradient(150deg, rgba(25, 33, 29, .91), rgba(11, 15, 14, .88));
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
+  box-shadow: -28px 12px 80px rgba(0, 0, 0, .48), inset 0 1px 0 rgba(255, 255, 255, .08);
 }
 .wa-header, .wa-tabs { position: relative; z-index: 1; flex: 0 0 auto; }
 .wa-header { min-height: 84px; padding: 17px 25px; border-color: var(--wa-line); }
@@ -221,25 +228,32 @@
 .wa-chat-error { margin: 0 0 14px; padding: 12px 13px; color: #ffe0dc; border-color: rgba(255,142,131,.35); }
 .wa-chat-error p { font-size: 15px; line-height: 1.65; }
 .wa-chat-error button { color: #fff0ee; font-size: 14px; }
-.wa-composer-dock { position: relative; z-index: 2; flex: 0 0 auto; padding: 12px 27px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--wa-line); background: #101412; }
-.wa-composer { gap: 10px; margin: 0; padding: 0; border: 0; }
-.wa-composer label { color: var(--wa-text); font-size: 15px; }
-.wa-composer textarea { height: 80px; min-height: 72px; max-height: 96px; resize: vertical; padding: 11px 14px; color: var(--wa-text); border-color: rgba(226,236,222,.25); background: #090c0a; font-size: 16px; line-height: 1.5; }
-.wa-composer textarea::placeholder { color: #adb7aa; opacity: 1; }
-.wa-composer-foot { min-height: 44px; color: var(--wa-muted); font-size: 12px; }
-.wa-composer-foot .button { min-height: 42px; padding: 0 15px; font-size: 14px; }
+.wa-composer-dock { position: relative; z-index: 2; flex: 0 0 auto; padding: 14px 22px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--wa-line); background: rgba(12, 16, 14, .76); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); }
+.wa-composer { gap: 9px; margin: 0; padding: 0; border: 0; }
+.wa-composer-label-row { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+.wa-composer label { color: var(--wa-text); font-size: 15px; font-weight: 650; }
+.wa-composer-label-row > span { min-inline-size: 0; color: var(--wa-subtle); font-size: 11px; text-align: end; }
+.wa-composer-field { display: grid; gap: 8px; padding: 12px; border: 1px solid rgba(226,236,222,.22); border-radius: 17px; background: linear-gradient(145deg, rgba(31,39,34,.9), rgba(13,17,15,.88)); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 12px 28px rgba(0,0,0,.16); transition: border-color .18s ease, box-shadow .18s ease; }
+.wa-composer-field:focus-within { border-color: rgba(198,243,91,.68); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 0 3px rgba(198,243,91,.1), 0 12px 30px rgba(0,0,0,.2); }
+.wa-composer textarea { width: 100%; height: 92px; min-height: 78px; max-height: 180px; resize: vertical; padding: 3px 4px 0; color: var(--wa-text); border: 0; border-radius: 0; outline: 0; background: transparent; font-size: 16px; line-height: 1.6; }
+.wa-composer textarea::placeholder { color: #b1bbb1; opacity: 1; }
+.wa-composer textarea:focus-visible { outline: 0; }
+.wa-composer-foot { min-height: 42px; display: flex; align-items: center; justify-content: space-between; padding-top: 8px; color: var(--wa-subtle); border-top: 1px solid rgba(226,236,222,.13); font: 11px 'DM Mono', monospace; }
+.wa-composer-foot .button { min-width: 92px; min-height: 42px; padding: 0 15px; font-size: 14px; }
 @media (min-width: 601px) and (max-width: 1100px) {
   .wa-panel { width: min(520px, calc(100vw - 32px)); }
 }
 @media (max-width: 600px) {
-  .wa-scrim { inset: 0; right: auto; width: 100vw; max-width: 100vw; }
-  .wa-panel { width: 100vw; max-width: 100vw; min-width: 0; height: 100dvh; border: 0; border-radius: 0; }
-  .wa-header { min-height: 78px; padding: calc(14px + env(safe-area-inset-top)) 17px 14px; }
+  .wa-scrim { inset: calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); }
+  .wa-panel { width: min(88vw, 420px); max-width: 100%; min-width: 0; height: 100%; max-height: 100%; margin: 0; border-radius: 22px; }
+  .wa-header { min-height: 72px; padding: 14px 16px; }
   .wa-tabs { padding: 0 12px; }
-  .wa-insights { padding: 20px 17px calc(30px + env(safe-area-inset-bottom)); }
-  .wa-chat-content { padding: 21px 17px 24px; }
-  .wa-composer-dock { padding-right: 17px; padding-left: 17px; }
-  .wa-composer textarea { height: 72px; min-height: 64px; max-height: 88px; }
+  .wa-insights { padding: 20px 17px 24px; }
+  .wa-chat-content { padding: 21px 17px 20px; }
+  .wa-composer-dock { padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
+  .wa-composer textarea { height: 78px; min-height: 68px; max-height: 140px; }
+  .wa-composer-label-row > span { font-size: 10px; }
+  .wa-composer-field { padding: 10px; }
   .wa-empty h3, .wa-chat-welcome h3 { font-size: 22px; }
   .wa-health-card { gap: 13px; padding: 14px; }
   .wa-health-ring, .wa-health-unavailable { width: 104px; height: 104px; flex-basis: 104px; }
@@ -258,5 +272,3 @@
   .wa-panel, .wa-spin { animation-duration: .01ms; animation-iteration-count: 1; }
   .wa-ring-progress, .wa-metric-track span { transition: none; }
 }
-
-.app-shell.assistant-open .topbar { visibility: hidden; pointer-events: none; }

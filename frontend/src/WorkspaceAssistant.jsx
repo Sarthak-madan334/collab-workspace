@@ -145,9 +145,11 @@ export default function WorkspaceAssistant({ token, roomId, activeFileId, launch
           <div className="wa-composer-dock">
             {state.chatError && <div className="wa-chat-error" role="alert"><p>{state.chatError}</p><button type="button" onClick={() => sendQuestion(state.pendingQuestion, true)}>Retry</button></div>}
             <form className="wa-composer" onSubmit={(event) => { event.preventDefault(); sendQuestion(); }}>
-              <label htmlFor="wa-question">Ask Synkro AI</label>
-              <textarea id="wa-question" value={state.question} maxLength={QUESTION_LIMIT} rows={3} placeholder="Ask about this workspace, file, or next steps…" onChange={(event) => dispatch({ type: 'question', value: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendQuestion(); } }} disabled={state.chatStatus === 'loading'} />
-              <div className="wa-composer-foot"><span>{state.question.length}/{QUESTION_LIMIT}</span><button className="button button-primary" type="submit" aria-label="Send question" disabled={state.chatStatus === 'loading' || !state.question.trim()}>{state.chatStatus === 'loading' ? <LoaderCircle className="wa-spin" size={16} /> : <ArrowUp size={16} />}<span>Send</span></button></div>
+              <div className="wa-composer-label-row"><label htmlFor="wa-question">Ask Synkro AI</label><span id="wa-composer-hint">Enter to send · Shift + Enter for a new line</span></div>
+              <div className="wa-composer-field">
+                <textarea id="wa-question" value={state.question} maxLength={QUESTION_LIMIT} rows={3} aria-describedby="wa-composer-hint" placeholder="Ask about this room, a file, or what your team should do next…" onChange={(event) => dispatch({ type: 'question', value: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendQuestion(); } }} disabled={state.chatStatus === 'loading'} />
+                <div className="wa-composer-foot"><span>{state.question.length}/{QUESTION_LIMIT}</span><button className="button button-primary" type="submit" aria-label="Send question" disabled={state.chatStatus === 'loading' || !state.question.trim()}>{state.chatStatus === 'loading' ? <LoaderCircle className="wa-spin" size={16} /> : <ArrowUp size={16} />}<span>Send</span></button></div>
+              </div>
             </form>
           </div>
         </section>}
